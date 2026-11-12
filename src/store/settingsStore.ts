@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AppSettings, UserPreferences } from '@types/common';
+import type { AppSettings, UserPreferences } from '@/types/common';
 import { APP_CONFIG } from '@data/constants';
 
 interface SettingsActions {
@@ -82,29 +82,29 @@ export const useSettingsStore = create<SettingsStore>()(
 
       // 时间显示设置
       setTimeFormat: (format: '12h' | '24h') => {
-        set({ timeFormat });
+        set({ timeFormat: format });
       },
 
       setShowSeconds: (show: boolean) => {
-        set({ showSeconds });
+        set({ showSeconds: show });
       },
 
       // 可视化设置
       setPreferredView: (view: '3d' | '2d') => {
-        set({ preferredView });
+        set({ preferredView: view });
       },
 
       setAnimationEnabled: (enabled: boolean) => {
-        set({ animationEnabled });
+        set({ animationEnabled: enabled });
       },
 
       // 性能设置
       setRenderQuality: (quality: 'low' | 'medium' | 'high') => {
-        set({ renderQuality });
+        set({ renderQuality: quality });
       },
 
       setEnableShadows: (enabled: boolean) => {
-        set({ enableShadows });
+        set({ enableShadows: enabled });
       },
 
       // 用户偏好

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Clock, MapPin, Sun, Moon } from 'lucide-react';
-import type { CityTimeData } from '@types/time';
+import type { CityTimeData } from '@/types/time';
 import { I18nFormatters } from '@utils/formatters';
 import { useSettingsStore } from '@store/settingsStore';
 

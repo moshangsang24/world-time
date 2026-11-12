@@ -1,8 +1,7 @@
-import React, { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useSunPosition } from '@hooks/useSunPosition';
 import { useTimeState } from '@hooks/useTimeState';
-import { COLORS } from '@data/constants';
-import type { CityTimeData } from '@types/time';
+import type { CityTimeData } from '@/types/time';
 
 interface WorldMap2DProps {
   cities: CityTimeData[];

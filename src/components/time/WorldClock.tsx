@@ -4,7 +4,6 @@ import { CityTimeCard } from './CityTimeCard';
 import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
 import { MAJOR_CITIES } from '@data/cities';
-import type { CityData } from '@types/time';
 
 type ViewMode = 'grid' | 'list';
 

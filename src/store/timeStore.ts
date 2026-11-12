@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { DateTime } from 'luxon';
-import type { TimeState, CityTimeData } from '@types/time';
+import type { TimeState, CityTimeData } from '@/types/time';
 import { DEFAULT_SELECTED_CITIES, getCitiesByIds } from '@data/cities';
 
 interface TimeActions {
@@ -45,7 +45,7 @@ const calculateCityTime = (
 };
 
 // 实时更新定时器
-let realTimeInterval: NodeJS.Timeout | null = null;
+let realTimeInterval: ReturnType<typeof setTimeout> | null = null;
 
 export const useTimeStore = create<TimeStore>()(
   subscribeWithSelector((set, get) => ({
@@ -62,7 +62,7 @@ export const useTimeStore = create<TimeStore>()(
     // 时间控制方法
     setTimeOffset: (offset: number) => {
       const clampedOffset = Math.max(-1440, Math.min(1440, offset));
-      set(state => {
+      set(() => {
         const baseTime = DateTime.now().plus({ minutes: clampedOffset });
         const beijingTime = baseTime.setZone('Asia/Shanghai');
         const utcTime = baseTime.toUTC();

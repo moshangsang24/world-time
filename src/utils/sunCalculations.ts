@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon';
 import * as SunCalc from 'suncalc';
 import { ASTRONOMICAL_CONSTANTS, EARTH_CONSTANTS } from '@data/constants';
-import type { SunPosition, DayNightBoundary, SunlightData, Coordinates } from '@types/geography';
+import type { SunPosition, DayNightBoundary, SunlightData, Coordinates } from '@/types/geography';
 
 /**
  * 太阳位置计算工具类
@@ -11,7 +11,6 @@ export class SunPositionCalculator {
    * 计算指定时间的太阳位置
    */
   static calculateSunPosition(dateTime: DateTime): SunPosition {
-    const date = dateTime.toJSDate();
     const jd = this.getJulianDay(dateTime);
     const centuries = (jd - ASTRONOMICAL_CONSTANTS.JULIAN_DAY_J2000) / 36525.0;
     
@@ -20,9 +19,6 @@ export class SunPositionCalculator {
     
     // 计算太阳几何平均异常点
     const geomMeanAnomSun = 357.52911 + centuries * (35999.05029 - 0.0001537 * centuries);
-    
-    // 计算地球轨道偏心率
-    const eccentEarth = 0.016708634 - centuries * (0.000042037 + 0.0000001267 * centuries);
     
     // 太阳中心方程
     const sunEq = Math.sin(this.toRadians(geomMeanAnomSun)) * (1.914602 - centuries * (0.004817 + 0.000014 * centuries)) +
@@ -40,7 +36,7 @@ export class SunPositionCalculator {
     const longitude = this.normalizeLongitude(sunTrueLong + 180);
     
     // 计算时角（基于格林威治均时）
-    const hourAngle = this.calculateHourAngle(dateTime, longitude);
+    const hourAngle = this.calculateHourAngle(dateTime);
     
     return {
       declination,
@@ -150,7 +146,7 @@ export class SunPositionCalculator {
     return normalized;
   }
 
-  private static calculateHourAngle(dateTime: DateTime, sunLongitude: number): number {
+  private static calculateHourAngle(dateTime: DateTime): number {
     const utc = dateTime.toUTC();
     const hours = utc.hour + utc.minute / 60 + utc.second / 3600;
     const hourAngle = (hours - 12) * 15; // 15度每小时
@@ -210,7 +206,7 @@ export class CoordinateUtils {
   static latLngToCartesian(
     latitude: number, 
     longitude: number, 
-    radius = EARTH_CONSTANTS.RADIUS_3D
+    radius: number = EARTH_CONSTANTS.RADIUS_3D
   ): { x: number; y: number; z: number } {
     const phi = (90 - latitude) * ASTRONOMICAL_CONSTANTS.DEGREES_TO_RADIANS;
     const theta = (longitude + 180) * ASTRONOMICAL_CONSTANTS.DEGREES_TO_RADIANS;
@@ -228,16 +224,15 @@ export class CoordinateUtils {
   static cartesianToLatLng(
     x: number, 
     y: number, 
-    z: number, 
-    radius = EARTH_CONSTANTS.RADIUS_3D
+    z: number
   ): Coordinates {
     const r = Math.sqrt(x * x + y * y + z * z);
     const latitude = 90 - Math.acos(y / r) * ASTRONOMICAL_CONSTANTS.RADIANS_TO_DEGREES;
-    const longitude = Math.atan2(z, -x) * ASTRONOMICAL_CONSTANTS.RADIANS_TO_DEGREES - 180;
+    const longitude = ((Math.atan2(z, -x) * ASTRONOMICAL_CONSTANTS.RADIANS_TO_DEGREES + 360) % 360) - 180;
     
     return {
       latitude: Math.max(-90, Math.min(90, latitude)),
-      longitude: Math.max(-180, Math.min(180, longitude))
+      longitude
     };
   }
 
@@ -247,7 +242,7 @@ export class CoordinateUtils {
   static calculateDistance(
     coord1: Coordinates, 
     coord2: Coordinates, 
-    radius = EARTH_CONSTANTS.RADIUS
+    radius: number = EARTH_CONSTANTS.RADIUS
   ): number {
     const lat1Rad = coord1.latitude * ASTRONOMICAL_CONSTANTS.DEGREES_TO_RADIANS;
     const lat2Rad = coord2.latitude * ASTRONOMICAL_CONSTANTS.DEGREES_TO_RADIANS;

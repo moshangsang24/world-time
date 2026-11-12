@@ -5,7 +5,7 @@ import { Mesh, Vector3, Color } from 'three';
 import { EARTH_CONSTANTS, COLORS } from '@data/constants';
 import { I18nFormatters } from '@utils/formatters';
 import { useSettingsStore } from '@store/settingsStore';
-import type { CityTimeData } from '@types/time';
+import type { CityTimeData } from '@/types/time';
 
 // 简化的坐标转换函数
 const latLngToVector3 = (latitude: number, longitude: number, radius: number, offset = 0) => {

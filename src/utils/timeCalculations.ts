@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon';
-import { TIME_CONSTANTS, ASTRONOMICAL_CONSTANTS } from '@data/constants';
-import type { CityData, CityTimeData } from '@types/time';
+import { TIME_CONSTANTS } from '@data/constants';
+import type { CityData, CityTimeData } from '@/types/time';
+import { SunPositionCalculator } from './sunCalculations';
 
 /**
  * 时间格式化工具函数
@@ -91,7 +92,11 @@ export class TimeCalculator {
       localDate: TimeFormatter.formatDate(cityTime, locale),
       timeString: TimeFormatter.formatTime(cityTime, format, showSeconds),
       utcOffsetString: TimeFormatter.formatUtcOffset(cityTime),
-      isDaytime: this.isDaytime(cityData.latitude, cityData.longitude, cityTime),
+      isDaytime: SunPositionCalculator.isDaylight(
+        cityData.latitude,
+        cityData.longitude,
+        SunPositionCalculator.calculateSunPosition(cityTime)
+      ),
     };
   }
 
@@ -118,23 +123,6 @@ export class TimeCalculator {
    */
   static getTimezoneOffset(timezone: string, date = DateTime.now()): number {
     return date.setZone(timezone).offset;
-  }
-
-  /**
-   * 判断指定位置在指定时间是否为白昼
-   * 这是一个简化版本，后续会被太阳位置计算替代
-   */
-  static isDaytime(
-    latitude: number, 
-    longitude: number, 
-    dateTime: DateTime
-  ): boolean {
-    // 简化计算：基于当地时间的小时判断
-    const localTime = dateTime.setZone(`UTC${Math.round(longitude / 15)}`);
-    const hour = localTime.hour;
-    
-    // 简单的昼夜判断：6点到18点为白天
-    return hour >= 6 && hour < 18;
   }
 
   /**

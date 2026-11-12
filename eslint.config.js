@@ -42,4 +42,9 @@ export default [
       'prefer-const': 'error',
     },
   },
+  {
+    // 构建配置运行在 Node 环境
+    files: ['*.config.{ts,js}'],
+    languageOptions: { globals: globals.node },
+  },
 ]

@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
 import { EARTH_CONSTANTS, ASTRONOMICAL_CONSTANTS } from '@data/constants';
-import type { Coordinates } from '@types/geography';
+import type { Coordinates } from '@/types/geography';
 
 /**
  * 坐标转换工具函数
@@ -12,7 +12,7 @@ export class CoordinateUtils {
   static latLngToVector3(
     latitude: number,
     longitude: number,
-    radius = EARTH_CONSTANTS.RADIUS_3D,
+    radius: number = EARTH_CONSTANTS.RADIUS_3D,
     offset = 0
   ): Vector3 {
     const phi = (90 - latitude) * ASTRONOMICAL_CONSTANTS.DEGREES_TO_RADIANS;
@@ -35,11 +35,12 @@ export class CoordinateUtils {
     const r = Math.sqrt(x * x + y * y + z * z);
     
     const latitude = 90 - Math.acos(y / r) * ASTRONOMICAL_CONSTANTS.RADIANS_TO_DEGREES;
-    const longitude = Math.atan2(z, -x) * ASTRONOMICAL_CONSTANTS.RADIANS_TO_DEGREES - 180;
+    // atan2 得到 θ = lng + 180，归一化回 [-180, 180)
+    const longitude = ((Math.atan2(z, -x) * ASTRONOMICAL_CONSTANTS.RADIANS_TO_DEGREES + 360) % 360) - 180;
     
     return {
       latitude: Math.max(-90, Math.min(90, latitude)),
-      longitude: Math.max(-180, Math.min(180, longitude)),
+      longitude,
     };
   }
 
@@ -49,7 +50,7 @@ export class CoordinateUtils {
   static sphericalDistance(
     coord1: Coordinates,
     coord2: Coordinates,
-    radius = EARTH_CONSTANTS.RADIUS_3D
+    radius: number = EARTH_CONSTANTS.RADIUS_3D
   ): number {
     const lat1Rad = coord1.latitude * ASTRONOMICAL_CONSTANTS.DEGREES_TO_RADIANS;
     const lat2Rad = coord2.latitude * ASTRONOMICAL_CONSTANTS.DEGREES_TO_RADIANS;
@@ -73,7 +74,7 @@ export class CoordinateUtils {
     screenY: number,
     screenWidth: number,
     screenHeight: number,
-    radius = EARTH_CONSTANTS.RADIUS_3D
+    radius: number = EARTH_CONSTANTS.RADIUS_3D
   ): Vector3 | null {
     // 将屏幕坐标标准化到[-1, 1]范围
     const x = (screenX / screenWidth) * 2 - 1;
@@ -225,7 +226,7 @@ export class PerformanceUtils {
     func: T,
     wait: number
   ): T {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
     
     return ((...args: Parameters<T>) => {
       clearTimeout(timeout);

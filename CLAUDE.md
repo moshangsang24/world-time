@@ -4,22 +4,21 @@
 
 用网页可视化全世界的时间与太阳光照：以北京时间（`Asia/Shanghai`）为基准，通过滚轮前后滚动 ±24 小时，观察各时区时间与昼夜的变化。
 
-需求与技术方案见 `项目需求文档.md`、`技术方案文档.md`。**这两份文档描述的是目标态，大量功能尚未实现，不能当作现状依据**（差异见文末）。
+需求与技术方案见 `docs/项目需求文档.md`、`docs/技术方案文档.md`，当前的修复计划见 `docs/修复方案.md`。**这两份文档描述的是目标态，大量功能尚未实现，不能当作现状依据**（差异见文末）。
 
 ## 常用命令
 
 ```bash
-npm run dev         # 唯一可靠的日常验证方式：http://localhost:3000（vite 配置了 open:true）
-npm run type-check  # 当前 48 个错误，失败
-npm run build       # = tsc && vite build，卡在 tsc，产不出 dist
-npm run lint        # 当前直接失败（--ext 与 flat config 不兼容）
-npm test            # 不存在此脚本
+npm run dev         # http://localhost:3000（vite 配置了 open:true）
+npm run type-check  # tsc --noEmit
+npm run build       # = tsc && vite build
+npm run lint        # 0 error；还有 16 个 warning（no-explicit-any 为主）
+npm test            # vitest run，测试文件为 src/**/*.test.{ts,tsx}
 ```
 
 - Node 18+（Vite 5 要求）。
-- **不要用 `npm run build` 成功作为验收标准**——它本来就是坏的。改完代码请在 dev 页面确认。
-- `vitest` / Testing Library / happy-dom 已安装，但没有配置、没有测试文件、没有 test 脚本。
-- 修构建时优先处理三类：`@types/*` 别名（TS6137）、`settingsStore` 的 setter、`types/visualization.ts` 的 `SunPosition` 导入。
+- 提交前四条命令都要通过；涉及界面的改动另外在 dev 页面确认。
+- vitest 配置写在 `vite.config.ts` 的 `test` 字段里（环境 happy-dom，复用同一套别名）。
 
 ## 技术栈
 
@@ -81,8 +80,7 @@ Hooks 分工：
 - **已知致命 bug**：`sunPosition.longitude` 用的是 `sunTrueLong + 180`（黄经），缺少地球自转（GMST/时角），**不是太阳直射点经度**，一天内几乎不变。`isDaylight`、2D 昼夜色带、城市昼夜图标因此整体错位。修正方向：`lng = normalize(RA - GMST)`，或最小改动 `normalize(-hourAngle)`，或直接用 `SunCalc.getPosition`。注意它返回**弧度**。
 - 白昼阈值：太阳高度角 `> -0.833°`。
 - `timeStore.calculateCityTime` 里 `isDaytime` 硬编码为 `true`；`WorldClock` 直接读 `useTimeStore().cities`，所以**侧栏永远显示太阳**。需要正确昼夜时用 `useTimeState()`。
-- **不要用 `TimeCalculator.isDaytime`**（按 6:00–18:00 判断，且对东经生成 Luxon 不支持的 `UTC8` zone）。
-- 经纬度 → 3D 统一用 `CoordinateUtils.latLngToVector3`：入参是**度**；北极是 `+Y`；`lng=0 → +X`，`lng=+90 → -Z`；默认半径 2。逆变换 `vector3ToLatLng` 对正东经有 bug，不要使用。项目里另有 3 份重复/内联的坐标转换，新增代码不要再复制。
+- 经纬度 → 3D 统一用 `CoordinateUtils.latLngToVector3`：入参是**度**；北极是 `+Y`；`lng=0 → +X`，`lng=+90 → -Z`；默认半径 2。逆变换是 `vector3ToLatLng`。项目里另有 3 份重复/内联的坐标转换，新增代码不要再复制。
 
 ## 代码约定
 
@@ -92,14 +90,13 @@ Hooks 分工：
 - 注释和 UI 文案用中文，标识符英文。
 - 样式全部 Tailwind utility，`darkMode: 'class'`，主题由 `settingsStore` 在 `<html>` 上加 `light` / `dark`；不用 `@apply`、CSS Modules 或组件级 CSS 文件。
 - import：跨目录用别名，同目录用相对路径，两种风格并存。可用别名：`@`、`@components`、`@utils`、`@hooks`、`@store`、`@data`。
-  - **不要写 `@types/...`**：TypeScript 会把它当成 `node_modules/@types` 下的声明包并报 `TS6137`。类型导入改用 `@/types/...` 或相对路径。
+  - **没有 `@types` 别名**（已删除，TypeScript 会把它当成 `node_modules/@types` 下的声明包）。类型导入用 `@/types/...` 或相对路径。
 - 新增城市：在 `src/data/cities.ts` 的 `MAJOR_CITIES` 里补 IANA 时区、经纬度、国家、静态 `utcOffset`（只用于排序/分组）。
 
 ## 已知问题
 
 所有 bug、技术债与文档差异统一记录在 **`docs/当前问题.md`**，按 P0 / P1 / P2 分级，附位置、现象、影响与修复建议。改动相关模块前先读该文档；修好一条就把对应条目勾选为完成。
 
-会直接影响日常开发的两点（详见该文档）：
+会直接影响日常开发的一点（详见该文档）：
 
-- `type-check` / `build` / `lint` 当前均不通过，只能用 `npm run dev` 验证。
 - 太阳直射点经度计算错误（P0-1），所有昼夜相关结果在修复前都不可信。

@@ -4,7 +4,7 @@ import { MAJOR_CITIES } from '@data/cities';
 import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
 import { I18nFormatters } from '@utils/formatters';
-import type { CityData } from '@types/time';
+import type { CityData } from '@/types/time';
 
 interface TimezoneGroupProps {
   timezone: string;
@@ -15,7 +15,6 @@ interface TimezoneGroupProps {
 }
 
 const TimezoneGroup: React.FC<TimezoneGroupProps> = ({
-  timezone,
   cities,
   selectedCities,
   onCitySelect,

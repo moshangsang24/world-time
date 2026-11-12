@@ -1,9 +1,9 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Mesh, SphereGeometry, MeshStandardMaterial, Color } from 'three';
+import { Mesh, Color } from 'three';
 import { useVisualizationStore } from '@store/visualizationStore';
 import { EARTH_CONSTANTS, COLORS } from '@data/constants';
-import type { SunPosition } from '@types/geography';
+import type { SunPosition } from '@/types/geography';
 
 interface Earth3DProps {
   sunPosition: SunPosition;
@@ -11,7 +11,6 @@ interface Earth3DProps {
 }
 
 export const Earth3D: React.FC<Earth3DProps> = ({
-  sunPosition,
   onEarthClick,
 }) => {
   const meshRef = useRef<Mesh>(null);
@@ -27,7 +26,7 @@ export const Earth3D: React.FC<Earth3DProps> = ({
   }, [renderQuality]);
 
   // 地球自转动画
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (meshRef.current && earthSettings.enableRotation) {
       meshRef.current.rotation.y += earthSettings.rotationSpeed * delta;
     }

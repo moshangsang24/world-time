@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTimeStore } from '@store/timeStore';
 import { SunPositionCalculator } from '@utils/sunCalculations';
-import type { SunPosition, DayNightBoundary, SunlightData } from '@types/geography';
+import type { SunPosition, DayNightBoundary, SunlightData } from '@/types/geography';
 
 export const useSunPosition = () => {
   const { beijingTime } = useTimeStore();

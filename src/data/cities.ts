@@ -1,4 +1,4 @@
-import { CityData } from '@types/time';
+import { CityData } from '@/types/time';
 
 export const MAJOR_CITIES: CityData[] = [
   // 亚洲

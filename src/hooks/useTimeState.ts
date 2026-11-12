@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
-import { TimeCalculator, TimeFormatter } from '@utils/timeCalculations';
+import { TimeFormatter } from '@utils/timeCalculations';
 import { useSunPosition } from './useSunPosition';
-import type { CityTimeData } from '@types/time';
+import type { CityTimeData } from '@/types/time';
 
 export const useTimeState = () => {
   const timeState = useTimeStore();
