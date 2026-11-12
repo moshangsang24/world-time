@@ -36,7 +36,13 @@ main.tsx → App → MainLayout
                     └─ TimeSlider
 ```
 
-- **`WorldMap2D`**：单个 `<canvas>` + 等距圆柱投影。大陆是手写矩形区块（非 GeoJSON）、昼夜为横向色带、太阳光晕、城市点/标签、点击命中检测。依赖变化时整块 canvas 全量重绘。
+- **`WorldMap2D`**：单个 `<canvas>` + 等距圆柱投影，地图固定 2:1、在容器内居中留边。绘制逻辑拆在 `components/visualization/map2d/`：
+  - `projection.ts`：经纬度 → 画布坐标，**2D 唯一一份**，绘制和点击命中都用它。
+  - `worldData.ts`：Natural Earth 1:110m 陆地和国界（`world-atlas` + `topojson-client`）。
+  - `drawBaseMap.ts`：海洋、陆地、国界、经纬网。结果缓存在离屏 canvas，只在尺寸或主题变化时重画。跨 ±180° 的多边形用 `traceRing` 展开后平移补画，不要用断开折线的方式画闭合环。
+  - `drawNightShade.ts`：按 1° 网格逐格算太阳高度角着色（含曙暮光渐变），再平滑放大。
+  - `drawOverlay.ts`：晨昏线、太阳直射点、底部地方平时刻度、城市点与防重叠标签。
+  - `palette.ts`：浅色 / 深色两套底图配色。
 - **`Earth3D` / `SunlightShader` / `CityMarkers`**：完整 3D 实现，但只被 `components/visualization/index.ts` 导出，应用里没有 `<Canvas>`，**从未渲染**。README 说的“3D 地球”是目标态。
 - 没有 2D/3D 切换；`settingsStore.preferredView` 没有任何消费者。
 
@@ -67,7 +73,7 @@ Hooks 分工：
 - `useScrollControl`：document 级 wheel / keydown。
 - `useWindowSize` / `useBreakpoint`：响应式（768px 断点）。
 
-**滚轮链路**：`document wheel` → `useScrollControl`（`preventDefault`；只取 `deltaY` 符号，每个事件 **1 分钟**；用 `useTimeStore.getState()` 读最新偏移）→ `timeStore.setTimeOffset`（退出实时、冻结锚点、clamp ±1440）→ `updateCityTimes()` 对每个城市 `setZone(city.timezone)` → 组件重渲染 + `WorldMap2D` 全量重绘。
+**滚轮链路**：`document wheel` → `useScrollControl`（`preventDefault`；只取 `deltaY` 符号，每个事件 **1 分钟**；用 `useTimeStore.getState()` 读最新偏移）→ `timeStore.setTimeOffset`（退出实时、冻结锚点、clamp ±1440）→ `updateCityTimes()` 对每个城市 `setZone(city.timezone)` → 组件重渲染 + `WorldMap2D` 重绘（贴缓存底图 → 夜面 → 标注）。
 
 **键盘**：`←/→` ±1 分钟、`Space` 暂停 / 恢复实时、`Home` 回到当前时间并恢复实时。
 

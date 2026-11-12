@@ -35,13 +35,16 @@ export const EarthVisualization: React.FC<EarthVisualizationProps> = ({
     enabled: true,
   });
 
-  const handleCityClick = (cityId: string) => {
+  // cityId 为 null 表示取消选中
+  const handleCityClick = (cityId: string | null) => {
     setSelectedCity(cityId);
-    onCityClick?.(cityId);
+    if (cityId) {
+      onCityClick?.(cityId);
+    }
   };
 
   return (
-    <div className={`relative w-full h-full bg-gradient-to-b from-blue-900 via-blue-800 to-blue-900 ${className}`}>
+    <div className={`relative w-full h-full bg-slate-200 dark:bg-slate-950 ${className}`}>
       <Suspense fallback={<LoadingFallback />}>
         <WorldMap2D
           cities={cities}
@@ -52,7 +55,7 @@ export const EarthVisualization: React.FC<EarthVisualizationProps> = ({
 
       {/* 选中城市信息面板 */}
       {selectedCity && (
-        <div className="absolute top-4 left-4 bg-black bg-opacity-75 text-white 
+        <div className="absolute top-3 left-3 bg-slate-900/75 text-white 
                        rounded-lg p-3 pointer-events-none z-10 max-w-xs">
           {(() => {
             const city = cities.find(c => c.id === selectedCity);
