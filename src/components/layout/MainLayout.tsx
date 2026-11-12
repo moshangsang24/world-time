@@ -131,11 +131,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">键盘快捷键</h4>
                 <ul className="space-y-1 list-disc list-inside ml-4">
-                  <li>方向键：控制时间前进/后退</li>
-                  <li>空格键：切换实时/历史模式</li>
-                  <li>Home键：回到当前时间</li>
-                  <li>Page Up/Down：快速调整时间</li>
-                  <li>Ctrl + 方向键：精细时间控制</li>
+                  <li>← / →：时间后退 / 前进 1 分钟</li>
+                  <li>空格键：暂停 / 恢复实时</li>
+                  <li>Home键：回到当前时间并恢复实时</li>
                 </ul>
               </div>
               
@@ -143,7 +141,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">时间控制</h4>
                 <ul className="space-y-1 list-disc list-inside ml-4">
                   <li>实时模式：显示当前真实时间</li>
-                  <li>历史模式：可查看前后24小时的时间</li>
+                  <li>暂停后：以暂停那一刻为起点，可查看前后24小时</li>
                   <li>滚动或拖拽滑块改变时间</li>
                   <li>点击快捷按钮快速跳转</li>
                 </ul>

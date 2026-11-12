@@ -16,7 +16,7 @@ export const WorldMap2D: React.FC<WorldMap2DProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { sunPosition } = useSunPosition();
-  const { formattedBeijingTime } = useTimeState();
+  const { formattedBaseTime } = useTimeState();
   
   // 将经纬度转换为2D地图坐标
   const latLngToMapCoords = (lat: number, lng: number, width: number, height: number) => {
@@ -299,7 +299,7 @@ export const WorldMap2D: React.FC<WorldMap2DProps> = ({
           </div>
           <div className="flex items-center">
             <span className="text-blue-400">🌍</span>
-            <span className="ml-2">北京时间: {formattedBeijingTime.time}</span>
+            <span className="ml-2">{formattedBaseTime.label}: {formattedBaseTime.time}</span>
           </div>
           <div className="text-xs text-gray-300 mt-2">
             实时世界地图 • 昼夜分布可视化

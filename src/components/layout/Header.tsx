@@ -13,7 +13,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSettingsClick,
   onInfoClick,
 }) => {
-  const { formattedBeijingTime, formattedTimeOffset, isRealTime } = useTimeState();
+  const { formattedBaseTime, formattedTimeOffset, isRealTime } = useTimeState();
   const { theme, setTheme } = useSettingsStore();
 
   const toggleTheme = () => {
@@ -38,12 +38,13 @@ export const Header: React.FC<HeaderProps> = ({
               isRealTime ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'
             }`} />
             <span className="text-gray-600 dark:text-gray-400">
-              {isRealTime ? '实时模式' : '历史模式'}
+              {isRealTime ? '实时模式' : '已暂停'}
             </span>
           </div>
           
           <div className="text-gray-600 dark:text-gray-400">
-            北京时间: {formattedBeijingTime.time}
+            {formattedBaseTime.label}: {formattedBaseTime.time}{' '}
+            {formattedBaseTime.zoneAbbr}
           </div>
           
           {formattedTimeOffset && (

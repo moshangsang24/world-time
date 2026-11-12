@@ -4,6 +4,8 @@ import { CityTimeCard } from './CityTimeCard';
 import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
 import { MAJOR_CITIES } from '@data/cities';
+import { BASE_ZONE } from '@data/constants';
+import { TimeFormatter } from '@utils/timeCalculations';
 
 type ViewMode = 'grid' | 'list';
 
@@ -11,7 +13,7 @@ export const WorldClock: React.FC = () => {
   const { 
     cities, 
     selectedCities, 
-    beijingTime,
+    baseTime,
     isRealTime,
     timeOffset,
     addCity, 
@@ -32,6 +34,9 @@ export const WorldClock: React.FC = () => {
   // 按时区排序的城市
   const sortedCities = useMemo(() => {
     return [...cities].sort((a, b) => {
+      // 基准城市始终排第一
+      if (a.id === BASE_ZONE.cityId) return -1;
+      if (b.id === BASE_ZONE.cityId) return 1;
       // 首先按UTC偏移排序
       if (a.utcOffset !== b.utcOffset) {
         return a.utcOffset - b.utcOffset;
@@ -67,8 +72,11 @@ export const WorldClock: React.FC = () => {
               世界时钟
             </h2>
             <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mt-1">
-              <span>北京时间: {beijingTime.toFormat('HH:mm:ss')}</span>
-              {!isRealTime && (
+              <span>
+                {BASE_ZONE.label}: {baseTime.toFormat('HH:mm:ss')}{' '}
+                {TimeFormatter.formatZoneAbbr(baseTime)}
+              </span>
+              {timeOffset !== 0 && (
                 <span className="ml-2 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/20 
                                text-yellow-800 dark:text-yellow-400 rounded text-xs">
                   时间偏移: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset / 60)}小时
@@ -165,6 +173,7 @@ export const WorldClock: React.FC = () => {
                 key={city.id}
                 city={city}
                 isSelected={selectedCity === city.id}
+                isBase={city.id === BASE_ZONE.cityId}
                 onSelect={handleCitySelect}
                 onRemove={handleRemoveCity}
                 showRemoveButton={cities.length > 1}

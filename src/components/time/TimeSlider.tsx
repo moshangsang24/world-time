@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Play, Pause, RotateCcw, Clock, Calendar } from 'lucide-react';
 import { useTimeStore } from '@store/timeStore';
-import { TIME_CONSTANTS } from '@data/constants';
+import { BASE_ZONE, TIME_CONSTANTS } from '@data/constants';
+import { TimeFormatter } from '@utils/timeCalculations';
 import { PerformanceUtils } from '@utils/coordinateUtils';
 
 export const TimeSlider: React.FC = () => {
   const { 
-    beijingTime, 
+    baseTime, 
     isRealTime, 
     timeOffset, 
     setTimeOffset, 
@@ -95,7 +96,7 @@ export const TimeSlider: React.FC = () => {
                 isRealTime ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
               }`} />
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {isRealTime ? '实时模式' : '历史模式'}
+                {isRealTime ? '实时模式' : '已暂停'}
               </span>
             </div>
           </div>
@@ -109,7 +110,7 @@ export const TimeSlider: React.FC = () => {
                   ? 'bg-green-100 text-green-600 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400' 
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400'
               }`}
-              title={isRealTime ? '暂停实时更新' : '开始实时更新'}
+              title={isRealTime ? '暂停实时更新' : '恢复实时更新'}
             >
               {isRealTime ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </button>
@@ -133,13 +134,13 @@ export const TimeSlider: React.FC = () => {
             <div>
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1">
                 <Calendar className="w-4 h-4 mr-1" />
-                北京时间
+                {BASE_ZONE.label}（{TimeFormatter.formatZoneAbbr(baseTime)}）
               </div>
               <div className="text-2xl font-mono font-bold text-gray-900 dark:text-white">
-                {beijingTime.toFormat('yyyy-MM-dd HH:mm:ss')}
+                {baseTime.toFormat('yyyy-MM-dd HH:mm:ss')}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                {beijingTime.toFormat('cccc', { locale: 'zh' })}
+                {baseTime.toFormat('cccc', { locale: 'zh' })}
               </div>
             </div>
             
@@ -199,7 +200,12 @@ export const TimeSlider: React.FC = () => {
               key={jump.label}
               onClick={() => {
                 setLocalOffset(jump.offset);
-                setTimeOffset(jump.offset);
+                // "现在"回到实时走动，其余按钮相对冻结时刻偏移
+                if (jump.offset === 0) {
+                  resetToRealTime();
+                } else {
+                  setTimeOffset(jump.offset);
+                }
               }}
               className={`px-3 py-1 text-sm rounded transition-colors duration-200 ${
                 localOffset === jump.offset

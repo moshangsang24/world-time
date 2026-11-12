@@ -2,7 +2,7 @@
 
 ## 项目目标
 
-用网页可视化全世界的时间与太阳光照：以北京时间（`Asia/Shanghai`）为基准，通过滚轮前后滚动 ±24 小时，观察各时区时间与昼夜的变化。
+用网页可视化全世界的时间与太阳光照：以洛杉矶时间（`America/Los_Angeles`）为基准，通过滚轮前后滚动 ±24 小时，观察各时区时间与昼夜的变化。基准时区集中定义在 `src/data/constants.ts` 的 `BASE_ZONE`，不要在别处硬编码时区名或“洛杉矶时间”文案。
 
 需求与技术方案见 `docs/项目需求文档.md`、`docs/技术方案文档.md`，当前的修复计划见 `docs/修复方案.md`。**这两份文档描述的是目标态，大量功能尚未实现，不能当作现状依据**（差异见文末）。
 
@@ -29,7 +29,7 @@ React 18 + TypeScript + Vite 5 + Zustand 4 + Luxon + Tailwind CSS 3。
 
 ```
 main.tsx → App → MainLayout
-                    ├─ Header（主题切换、北京时间、实时/偏移状态）
+                    ├─ Header（主题切换、基准时间、实时/偏移状态）
                     ├─ Sidebar → WorldClock → CityTimeCard
                     │            TimezoneSelector
                     ├─ EarthVisualization → WorldMap2D   ← 唯一实际渲染的视图
@@ -52,29 +52,30 @@ src/hooks/  src/store/  src/utils/  src/data/  src/types/
 三份 Zustand store，互不直接调用，跨 store 的聚合放在 hooks 里。
 
 1. **`timeStore`（核心，不持久化）**
-   - `beijingTime: DateTime`（Luxon，`Asia/Shanghai`）是**唯一时间事实来源**；`utcTime` 只是派生镜像，无消费者。
+   - `baseTime: DateTime`（Luxon，`BASE_ZONE.timezone`）是**唯一时间事实来源**。
    - `timeOffset: number`，单位**分钟**，范围 ±1440。
    - `cities` 是由 `selectedCities` 派生出的 `CityTimeData[]`。
-   - 模块加载时自动启动 1s interval（实时模式）并初始化城市，不是 React effect。
+   - `anchorTime`：离开实时模式那一刻冻结的时刻，`baseTime = anchorTime + timeOffset`；实时模式下为 `null`。
+   - 模块加载时自动启动 1s interval（实时模式）并初始化城市，不是 React effect；HMR 时通过 `import.meta.hot.dispose` 清理。
 2. **`settingsStore`（persist 到 `world-time-settings`）**：主题（唯一真正可用的设置 UI）、语言、时间格式等。
 3. **`visualizationStore`**：主要服务未启用的 3D。实际只消费 `selectedCity`。
 
 Hooks 分工：
 
 - `useTimeState`：时间展示 + 给城市补正确的 `isDaytime`，返回增强后的 `cities`。**要显示/判断昼夜必须用它。**
-- `useSunPosition`：由 `beijingTime` 计算太阳位置、晨昏线、日出日落。
+- `useSunPosition`：由 `baseTime` 计算太阳位置、晨昏线、日出日落。
 - `useScrollControl`：document 级 wheel / keydown。
 - `useWindowSize` / `useBreakpoint`：响应式（768px 断点）。
 
-**滚轮链路**：`document wheel` → `useScrollControl`（`preventDefault`；若在实时模式先退出；只取 `deltaY` 符号，每个事件 **1 分钟**；clamp ±1440）→ `timeStore.setTimeOffset` → `DateTime.now().plus({minutes})` → `updateCityTimes()` 对每个城市 `setZone(city.timezone)` → 组件重渲染 + `WorldMap2D` 全量重绘。
+**滚轮链路**：`document wheel` → `useScrollControl`（`preventDefault`；只取 `deltaY` 符号，每个事件 **1 分钟**；用 `useTimeStore.getState()` 读最新偏移）→ `timeStore.setTimeOffset`（退出实时、冻结锚点、clamp ±1440）→ `updateCityTimes()` 对每个城市 `setZone(city.timezone)` → 组件重渲染 + `WorldMap2D` 全量重绘。
 
-**键盘**：`←/→` ±1 分钟、`Space` 切换实时、`Home` 把 offset 归零（不会恢复实时走动）。帮助面板宣称的 PageUp/Down、Ctrl 精细控制**未实现**。
+**键盘**：`←/→` ±1 分钟、`Space` 暂停 / 恢复实时、`Home` 回到当前时间并恢复实时。
 
 ## 时间与天文约定（最容易踩坑）
 
-- 一切时间运算用 Luxon `DateTime`；跨时区显示用 `beijingTime.setZone(city.timezone).toFormat(...)`。
+- 一切时间运算用 Luxon `DateTime`；跨时区显示用 `baseTime.setZone(city.timezone).toFormat(...)`。时区缩写（PST/PDT）用 `TimeFormatter.formatZoneAbbr`。
 - **不要** `toJSDate()` + `Intl.DateTimeFormat` 且不传 `timeZone`——会按运行环境时区格式化（`utils/formatters.ts` 里有这种写法，跨日会显示错星期）。
-- `setTimeOffset` 每次以“当下 now + offset”为锚点，不是冻结基准；间隔一会儿再滚会跳变。
+- 偏移是**经过的分钟数**（对绝对时刻加减），不是墙上时钟的分钟数；洛杉矶有夏令时，不要改成按本地时间字段加减。
 - `CityData.utcOffset` 单位是**小时**，是标准时、**不随夏令时变化**；当前真实偏移用 `setZone(...).offset / 60` 或 `toFormat('ZZ')`。排序/分组仍在用静态值，DST 期间会偏差一小时。
 - 太阳位置来自 `utils/sunCalculations.ts` 的自研 NOAA 近似；`suncalc` 只在 `calculateSunlightData` 里用了 `getTimes`，且默认坐标 `(0,0)`、UI 未消费。
 - **已知致命 bug**：`sunPosition.longitude` 用的是 `sunTrueLong + 180`（黄经），缺少地球自转（GMST/时角），**不是太阳直射点经度**，一天内几乎不变。`isDaylight`、2D 昼夜色带、城市昼夜图标因此整体错位。修正方向：`lng = normalize(RA - GMST)`，或最小改动 `normalize(-hourAngle)`，或直接用 `SunCalc.getPosition`。注意它返回**弧度**。

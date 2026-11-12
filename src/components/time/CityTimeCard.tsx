@@ -7,6 +7,7 @@ import { useSettingsStore } from '@store/settingsStore';
 interface CityTimeCardProps {
   city: CityTimeData;
   isSelected?: boolean;
+  isBase?: boolean; // 是否为基准时区所在城市
   onSelect?: (cityId: string) => void;
   onRemove?: (cityId: string) => void;
   showRemoveButton?: boolean;
@@ -15,6 +16,7 @@ interface CityTimeCardProps {
 export const CityTimeCard: React.FC<CityTimeCardProps> = ({
   city,
   isSelected = false,
+  isBase = false,
   onSelect,
   onRemove,
   showRemoveButton = false,
@@ -67,6 +69,12 @@ export const CityTimeCard: React.FC<CityTimeCardProps> = ({
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-sm text-gray-900 dark:text-white truncate">
             {cityName}
+            {isBase && (
+              <span className="ml-1.5 px-1 py-0.5 rounded text-[10px] font-medium align-middle
+                               bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
+                基准
+              </span>
+            )}
           </h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
             <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />

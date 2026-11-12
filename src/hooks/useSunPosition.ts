@@ -4,12 +4,12 @@ import { SunPositionCalculator } from '@utils/sunCalculations';
 import type { SunPosition, DayNightBoundary, SunlightData } from '@/types/geography';
 
 export const useSunPosition = () => {
-  const { beijingTime } = useTimeStore();
+  const { baseTime } = useTimeStore();
 
   // 计算太阳位置
   const sunPosition = useMemo<SunPosition>(() => {
-    return SunPositionCalculator.calculateSunPosition(beijingTime);
-  }, [beijingTime]);
+    return SunPositionCalculator.calculateSunPosition(baseTime);
+  }, [baseTime]);
 
   // 计算昼夜分界线
   const dayNightBoundary = useMemo<DayNightBoundary>(() => {
@@ -18,8 +18,8 @@ export const useSunPosition = () => {
 
   // 计算完整的太阳光照数据
   const sunlightData = useMemo<SunlightData>(() => {
-    return SunPositionCalculator.calculateSunlightData(beijingTime);
-  }, [beijingTime]);
+    return SunPositionCalculator.calculateSunlightData(baseTime);
+  }, [baseTime]);
 
   // 判断指定坐标是否为白昼的函数
   const isDaylight = useMemo(() => {
@@ -31,9 +31,9 @@ export const useSunPosition = () => {
   // 计算太阳高度角的函数
   const getSunAltitude = useMemo(() => {
     return (latitude: number, longitude: number) => {
-      return SunPositionCalculator.calculateSunAltitude(latitude, longitude, beijingTime);
+      return SunPositionCalculator.calculateSunAltitude(latitude, longitude, baseTime);
     };
-  }, [beijingTime]);
+  }, [baseTime]);
 
   return {
     sunPosition,
@@ -46,11 +46,11 @@ export const useSunPosition = () => {
 
 // 用于特定位置的太阳位置Hook
 export const useSunPositionForLocation = (latitude: number, longitude: number) => {
-  const { beijingTime } = useTimeStore();
+  const { baseTime } = useTimeStore();
 
   const locationSunData = useMemo(() => {
-    const sunlightData = SunPositionCalculator.calculateSunlightData(beijingTime, latitude, longitude);
-    const altitude = SunPositionCalculator.calculateSunAltitude(latitude, longitude, beijingTime);
+    const sunlightData = SunPositionCalculator.calculateSunlightData(baseTime, latitude, longitude);
+    const altitude = SunPositionCalculator.calculateSunAltitude(latitude, longitude, baseTime);
     const isDaytime = SunPositionCalculator.isDaylight(latitude, longitude, sunlightData.sunPosition);
 
     return {
@@ -58,7 +58,7 @@ export const useSunPositionForLocation = (latitude: number, longitude: number) =
       altitude,
       isDaytime,
     };
-  }, [beijingTime, latitude, longitude]);
+  }, [baseTime, latitude, longitude]);
 
   return locationSunData;
 };

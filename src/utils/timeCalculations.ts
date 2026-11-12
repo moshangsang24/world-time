@@ -8,6 +8,13 @@ import { SunPositionCalculator } from './sunCalculations';
  */
 export class TimeFormatter {
   /**
+   * 时区缩写，如 PST / PDT。固定用 en-US，否则中文环境下会得到 GMT-8。
+   */
+  static formatZoneAbbr(dateTime: DateTime): string {
+    return dateTime.setLocale('en-US').toFormat('ZZZZ');
+  }
+
+  /**
    * 格式化时间字符串
    */
   static formatTime(

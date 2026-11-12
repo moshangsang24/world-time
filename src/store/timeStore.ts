@@ -3,6 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { DateTime } from 'luxon';
 import type { TimeState, CityTimeData } from '@/types/time';
 import { DEFAULT_SELECTED_CITIES, getCitiesByIds } from '@data/cities';
+import { BASE_ZONE, TIME_CONSTANTS, UI_CONSTANTS } from '@data/constants';
 
 interface TimeActions {
   // 时间控制
@@ -44,62 +45,63 @@ const calculateCityTime = (
   };
 };
 
+// 当前时刻（基准时区）
+const nowInBaseZone = (): DateTime =>
+  DateTime.now().setZone(BASE_ZONE.timezone);
+
 // 实时更新定时器
-let realTimeInterval: ReturnType<typeof setTimeout> | null = null;
+let realTimeInterval: ReturnType<typeof setInterval> | null = null;
 
 export const useTimeStore = create<TimeStore>()(
   subscribeWithSelector((set, get) => ({
     // 初始状态
-    beijingTime: DateTime.now().setZone('Asia/Shanghai'),
-    utcTime: DateTime.utc(),
+    baseTime: nowInBaseZone(),
     isRealTime: true,
     timeOffset: 0,
+    anchorTime: null,
     cities: [],
     selectedCities: DEFAULT_SELECTED_CITIES,
     is24HourFormat: true,
     showSeconds: true,
 
     // 时间控制方法
+    // 偏移相对"离开实时模式那一刻"冻结的锚点计算，而不是每次取 now，
+    // 这样隔一会儿再滚动不会跳变。偏移是经过的分钟数，跨夏令时切换也正确。
     setTimeOffset: (offset: number) => {
-      const clampedOffset = Math.max(-1440, Math.min(1440, offset));
-      set(() => {
-        const baseTime = DateTime.now().plus({ minutes: clampedOffset });
-        const beijingTime = baseTime.setZone('Asia/Shanghai');
-        const utcTime = baseTime.toUTC();
-        
-        return {
-          timeOffset: clampedOffset,
-          beijingTime,
-          utcTime,
-          isRealTime: false,
-        };
+      const limit = TIME_CONSTANTS.MINUTES_PER_DAY;
+      const clampedOffset = Math.max(-limit, Math.min(limit, offset));
+      const anchorTime = get().anchorTime ?? nowInBaseZone();
+
+      get().stopRealTimeMode();
+      set({
+        anchorTime,
+        timeOffset: clampedOffset,
+        baseTime: anchorTime.plus({ minutes: clampedOffset }),
+        isRealTime: false,
       });
-      
-      // 更新城市时间
+
       get().updateCityTimes();
     },
 
     resetToRealTime: () => {
       set({
         timeOffset: 0,
+        anchorTime: null,
         isRealTime: true,
-        beijingTime: DateTime.now().setZone('Asia/Shanghai'),
-        utcTime: DateTime.utc(),
+        baseTime: nowInBaseZone(),
       });
-      
+
       get().updateCityTimes();
       get().startRealTimeMode();
     },
 
+    // 实时 → 暂停：冻结在当前时刻；暂停 → 实时：偏移归零并恢复走动
     toggleRealTime: () => {
-      const { isRealTime } = get();
-      if (isRealTime) {
-        get().stopRealTimeMode();
+      if (get().isRealTime) {
+        get().setTimeOffset(0);
       } else {
-        get().startRealTimeMode();
+        get().resetToRealTime();
       }
-      
-      set({ isRealTime: !isRealTime });
     },
 
     // 城市管理方法
@@ -142,11 +144,11 @@ export const useTimeStore = create<TimeStore>()(
 
     // 更新城市时间
     updateCityTimes: () => {
-      const { selectedCities, beijingTime, is24HourFormat, showSeconds } = get();
+      const { selectedCities, baseTime, is24HourFormat, showSeconds } = get();
       const cityData = getCitiesByIds(selectedCities);
       
       const cities = cityData.map(city => {
-        const cityTimeData = calculateCityTime(city, beijingTime);
+        const cityTimeData = calculateCityTime(city, baseTime);
         
         // 根据设置格式化时间字符串
         const format = is24HourFormat 
@@ -169,15 +171,11 @@ export const useTimeStore = create<TimeStore>()(
       }
       
       realTimeInterval = setInterval(() => {
-        const { isRealTime } = get();
-        if (isRealTime) {
-          set({
-            beijingTime: DateTime.now().setZone('Asia/Shanghai'),
-            utcTime: DateTime.utc(),
-          });
+        if (get().isRealTime) {
+          set({ baseTime: nowInBaseZone() });
           get().updateCityTimes();
         }
-      }, 1000);
+      }, UI_CONSTANTS.UPDATE_INTERVAL);
     },
 
     stopRealTimeMode: () => {
@@ -200,3 +198,10 @@ useTimeStore.subscribe(
 // 初始化时启动实时模式
 useTimeStore.getState().startRealTimeMode();
 useTimeStore.getState().updateCityTimes();
+
+// 热更新时清掉旧模块的定时器，避免叠加
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    useTimeStore.getState().stopRealTimeMode();
+  });
+}

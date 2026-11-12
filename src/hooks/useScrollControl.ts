@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useTimeStore } from '@store/timeStore';
 import { UI_CONSTANTS } from '@data/constants';
 
@@ -13,97 +13,65 @@ export const useScrollControl = (options: UseScrollControlOptions = {}) => {
     enabled = true,
   } = options;
 
-  const { 
-    timeOffset, 
-    setTimeOffset, 
-    isRealTime, 
-    toggleRealTime 
-  } = useTimeStore();
-
-  // 滚动处理函数
-  const handleWheel = useCallback((event: WheelEvent) => {
+  useEffect(() => {
     if (!enabled) return;
 
-    // 防止页面滚动
-    event.preventDefault();
+    // 每次都从 store 读最新偏移：避免闭包里的旧值导致快速滚动丢步，
+    // 也不必在每次偏移变化后重新绑定监听。
+    // setTimeOffset 自己负责退出实时模式并冻结锚点。
+    const shiftTime = (minutes: number) => {
+      const { timeOffset, setTimeOffset } = useTimeStore.getState();
+      setTimeOffset(timeOffset + minutes);
+    };
 
-    // 如果当前是实时模式，切换到历史模式
-    if (isRealTime) {
-      toggleRealTime();
-    }
-
-    // 计算时间偏移
-    const delta = event.deltaY;
-    const offsetChange = delta > 0 ? sensitivity : -sensitivity;
-    const newOffset = timeOffset + offsetChange;
-    
-    // 应用偏移量限制（±24小时）
-    const clampedOffset = Math.max(-1440, Math.min(1440, newOffset));
-    setTimeOffset(clampedOffset);
-  }, [enabled, sensitivity, timeOffset, setTimeOffset, isRealTime, toggleRealTime]);
-
-  // 键盘控制支持
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (!enabled) return;
-
-    // 检查焦点是否在输入框上
-    const activeElement = document.activeElement;
-    if (activeElement && (
-      activeElement.tagName === 'INPUT' ||
-      activeElement.tagName === 'TEXTAREA'
-    )) {
-      return;
-    }
-
-    let offsetChange = 0;
-
-    switch (event.code) {
-      case 'ArrowLeft':
-        offsetChange = -sensitivity;
-        break;
-      case 'ArrowRight':
-        offsetChange = sensitivity;
-        break;
-      case 'Space':
-        event.preventDefault();
-        toggleRealTime();
-        return;
-      case 'Home':
-        if (timeOffset !== 0) {
-          event.preventDefault();
-          setTimeOffset(0);
-        }
-        return;
-      default:
-        return;
-    }
-
-    if (offsetChange !== 0) {
+    const handleWheel = (event: WheelEvent) => {
+      // 防止页面滚动
       event.preventDefault();
+      shiftTime(event.deltaY > 0 ? sensitivity : -sensitivity);
+    };
 
-      if (isRealTime) {
-        toggleRealTime();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // 焦点在输入框上时不拦截
+      const activeElement = document.activeElement;
+      if (
+        activeElement &&
+        (activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA')
+      ) {
+        return;
       }
 
-      const newOffset = timeOffset + offsetChange;
-      const clampedOffset = Math.max(-1440, Math.min(1440, newOffset));
-      setTimeOffset(clampedOffset);
-    }
-  }, [enabled, sensitivity, timeOffset, setTimeOffset, isRealTime, toggleRealTime]);
+      switch (event.code) {
+        case 'ArrowLeft':
+          event.preventDefault();
+          shiftTime(-sensitivity);
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          shiftTime(sensitivity);
+          break;
+        case 'Space':
+          event.preventDefault();
+          useTimeStore.getState().toggleRealTime();
+          break;
+        case 'Home':
+          event.preventDefault();
+          useTimeStore.getState().resetToRealTime();
+          break;
+        default:
+          break;
+      }
+    };
 
-  // 绑定事件监听器
-  useEffect(() => {
-    if (enabled) {
-      // 绑定到document以确保全局响应
-      document.addEventListener('wheel', handleWheel, { passive: false });
-      document.addEventListener('keydown', handleKeyDown);
-    }
+    // 绑定到document以确保全局响应
+    document.addEventListener('wheel', handleWheel, { passive: false });
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('wheel', handleWheel);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [enabled, handleWheel, handleKeyDown]);
+  }, [enabled, sensitivity]);
 
   return {
     sensitivity,

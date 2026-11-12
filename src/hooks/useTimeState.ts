@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
 import { TimeFormatter } from '@utils/timeCalculations';
+import { BASE_ZONE } from '@data/constants';
 import { useSunPosition } from './useSunPosition';
 import type { CityTimeData } from '@/types/time';
 
@@ -24,14 +25,16 @@ export const useTimeState = () => {
     }));
   }, [timeState.cities, isDaylight, timeFormat, showSeconds, language]);
 
-  // 当前北京时间的格式化显示
-  const formattedBeijingTime = useMemo(() => {
+  // 基准时间的格式化显示
+  const formattedBaseTime = useMemo(() => {
     return {
-      time: TimeFormatter.formatTime(timeState.beijingTime, timeFormat, showSeconds),
-      date: TimeFormatter.formatDate(timeState.beijingTime, language),
-      utcOffset: TimeFormatter.formatUtcOffset(timeState.beijingTime),
+      time: TimeFormatter.formatTime(timeState.baseTime, timeFormat, showSeconds),
+      date: TimeFormatter.formatDate(timeState.baseTime, language),
+      utcOffset: TimeFormatter.formatUtcOffset(timeState.baseTime),
+      label: BASE_ZONE.label,
+      zoneAbbr: TimeFormatter.formatZoneAbbr(timeState.baseTime),
     };
-  }, [timeState.beijingTime, timeFormat, showSeconds, language]);
+  }, [timeState.baseTime, timeFormat, showSeconds, language]);
 
   // 时间偏移的格式化显示
   const formattedTimeOffset = useMemo(() => {
@@ -94,7 +97,7 @@ export const useTimeState = () => {
     
     // 增强的数据
     cities: enhancedCities,
-    formattedBeijingTime,
+    formattedBaseTime,
     formattedTimeOffset,
     citiesByTimezone,
     citiesByDayNight,

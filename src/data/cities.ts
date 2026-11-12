@@ -214,18 +214,18 @@ export const MAJOR_CITIES: CityData[] = [
 
 // 默认选中的城市（按需求文档中的12个主要城市）
 export const DEFAULT_SELECTED_CITIES = [
-  'beijing',
-  'tokyo', 
-  'sydney',
-  'mumbai',
-  'dubai',
-  'moscow',
-  'berlin',
-  'london',
-  'new-york',
   'los-angeles',
   'chicago',
+  'new-york',
   'sao-paulo',
+  'london',
+  'berlin',
+  'moscow',
+  'dubai',
+  'mumbai',
+  'beijing',
+  'tokyo',
+  'sydney',
 ];
 
 // 获取城市数据的辅助函数

@@ -21,13 +21,13 @@ export interface CityTimeData extends CityData {
 }
 
 export interface TimeState {
-  // 基准时间
-  beijingTime: DateTime;
-  utcTime: DateTime;
-  
+  // 基准时间（BASE_ZONE 时区下的当前展示时刻）
+  baseTime: DateTime;
+
   // 模式控制
   isRealTime: boolean;
-  timeOffset: number; // 相对当前时间的偏移（分钟）
+  timeOffset: number; // 相对 anchorTime 的偏移（分钟，按经过的时间计）
+  anchorTime: DateTime | null; // 离开实时模式时冻结的时刻；实时模式下为 null
   
   // 城市时间
   cities: CityTimeData[];
