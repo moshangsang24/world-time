@@ -37,14 +37,7 @@ export const useTimeState = () => {
   const formattedTimeOffset = useMemo(() => {
     if (timeState.timeOffset === 0) return null;
     
-    const hours = Math.floor(Math.abs(timeState.timeOffset) / 60);
-    const minutes = Math.abs(timeState.timeOffset) % 60;
-    const sign = timeState.timeOffset >= 0 ? '+' : '-';
-    
-    if (minutes === 0) {
-      return `${sign}${hours}小时`;
-    }
-    return `${sign}${hours}小时${minutes}分钟`;
+    return TimeFormatter.formatOffsetMinutes(timeState.timeOffset);
   }, [timeState.timeOffset]);
 
   // 按时区分组的城市
@@ -62,7 +55,8 @@ export const useTimeState = () => {
       .map(([timezone, cities]) => ({
         timezone,
         cities,
-        utcOffset: cities[0].utcOffset,
+        // 当前实际偏移（小时），含夏令时
+        utcOffset: cities[0].currentTime.offset / 60,
       }))
       .sort((a, b) => a.utcOffset - b.utcOffset);
   }, [enhancedCities]);

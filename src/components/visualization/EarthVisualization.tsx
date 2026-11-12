@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useRef } from 'react';
 import { WorldMap2D } from './WorldMap2D';
 import { useVisualizationStore } from '@store/visualizationStore';
 import { useTimeState } from '@hooks/useTimeState';
@@ -30,10 +30,9 @@ export const EarthVisualization: React.FC<EarthVisualizationProps> = ({
     setSelectedCity,
   } = useVisualizationStore();
 
-  // 启用滚动控制
-  useScrollControl({
-    enabled: true,
-  });
+  // 鼠标在地图上滚动时调整时间；侧栏等其他区域保持原生滚动
+  const containerRef = useRef<HTMLDivElement>(null);
+  useScrollControl({ targetRef: containerRef });
 
   // cityId 为 null 表示取消选中
   const handleCityClick = (cityId: string | null) => {
@@ -44,7 +43,10 @@ export const EarthVisualization: React.FC<EarthVisualizationProps> = ({
   };
 
   return (
-    <div className={`relative w-full h-full bg-slate-200 dark:bg-slate-950 ${className}`}>
+    <div
+      ref={containerRef}
+      className={`relative w-full h-full bg-slate-200 dark:bg-slate-950 ${className}`}
+    >
       <Suspense fallback={<LoadingFallback />}>
         <WorldMap2D
           cities={cities}

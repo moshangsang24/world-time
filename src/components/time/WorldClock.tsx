@@ -3,6 +3,7 @@ import { Plus, Settings, Grid, List } from 'lucide-react';
 import { CityTimeCard } from './CityTimeCard';
 import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
+import { useVisualizationStore } from '@store/visualizationStore';
 import { MAJOR_CITIES } from '@data/cities';
 import { BASE_ZONE } from '@data/constants';
 import { TimeFormatter } from '@utils/timeCalculations';
@@ -24,7 +25,11 @@ export const WorldClock: React.FC = () => {
   const { language } = useSettingsStore();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  // 选中城市与地图共用同一份状态
+  const selectedCity = useVisualizationStore(state => state.selectedCity);
+  const setSelectedCity = useVisualizationStore(
+    state => state.setSelectedCity
+  );
 
   // 可添加的城市列表（排除已选择的）
   const availableCities = useMemo(() => {
@@ -37,9 +42,9 @@ export const WorldClock: React.FC = () => {
       // 基准城市始终排第一
       if (a.id === BASE_ZONE.cityId) return -1;
       if (b.id === BASE_ZONE.cityId) return 1;
-      // 首先按UTC偏移排序
-      if (a.utcOffset !== b.utcOffset) {
-        return a.utcOffset - b.utcOffset;
+      // 再按当前实际 UTC 偏移排序（含夏令时，不用静态 utcOffset）
+      if (a.currentTime.offset !== b.currentTime.offset) {
+        return a.currentTime.offset - b.currentTime.offset;
       }
       // 相同时区按名称排序
       return a.name.localeCompare(b.name);
@@ -59,7 +64,7 @@ export const WorldClock: React.FC = () => {
   };
 
   const handleCitySelect = (cityId: string) => {
-    setSelectedCity(prev => prev === cityId ? null : cityId);
+    setSelectedCity(selectedCity === cityId ? null : cityId);
   };
 
   return (
@@ -79,7 +84,7 @@ export const WorldClock: React.FC = () => {
               {timeOffset !== 0 && (
                 <span className="ml-2 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/20 
                                text-yellow-800 dark:text-yellow-400 rounded text-xs">
-                  时间偏移: {timeOffset > 0 ? '+' : ''}{Math.round(timeOffset / 60)}小时
+                  时间偏移: {TimeFormatter.formatOffsetMinutes(timeOffset)}
                 </span>
               )}
             </div>
@@ -213,7 +218,8 @@ export const WorldClock: React.FC = () => {
                     {language === 'zh' ? city.name : city.nameEn}
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {city.country} • UTC{city.utcOffset >= 0 ? '+' : ''}{city.utcOffset}
+                    {city.country} • UTC
+                    {baseTime.setZone(city.timezone).toFormat('ZZ')}
                   </div>
                 </button>
               ))}

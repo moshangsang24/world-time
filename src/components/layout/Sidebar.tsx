@@ -41,10 +41,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* 侧边栏 */}
       <div
         className={`
-          fixed top-0 left-0 h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700
-          transform transition-transform duration-300 ease-in-out z-50
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          ${isMd ? 'relative translate-x-0' : ''}
+          h-full flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700
+          ${
+            isMd
+              ? `relative flex-shrink-0 ${isOpen ? '' : 'hidden'}`
+              : `fixed top-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
+                  isOpen ? 'translate-x-0' : '-translate-x-full'
+                }`
+          }
         `}
         style={{ width: sidebarWidth }}
       >
@@ -90,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* 侧边栏内容 */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden">
           {currentView === 'worldclock' && <WorldClock />}
           {currentView === 'timezone-selector' && <TimezoneSelector />}
         </div>

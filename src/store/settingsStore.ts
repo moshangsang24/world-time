@@ -23,7 +23,6 @@ interface SettingsActions {
   setEnableShadows: (enabled: boolean) => void;
   
   // 用户偏好
-  setSelectedCities: (cityIds: string[]) => void;
   setCustomCities: (cityIds: string[]) => void;
   setLastUsedTimeOffset: (offset: number) => void;
   
@@ -46,7 +45,6 @@ const defaultSettings: AppSettings = {
 
 const defaultUserPreferences: UserPreferences = {
   ...defaultSettings,
-  selectedCities: ['beijing', 'tokyo', 'london', 'new-york'],
   customCities: [],
   lastUsedTimeOffset: 0,
 };
@@ -108,10 +106,6 @@ export const useSettingsStore = create<SettingsStore>()(
       },
 
       // 用户偏好
-      setSelectedCities: (cityIds: string[]) => {
-        set({ selectedCities: cityIds });
-      },
-
       setCustomCities: (cityIds: string[]) => {
         set({ customCities: cityIds });
       },

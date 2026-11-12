@@ -115,4 +115,17 @@ describe('timeStore 基准时区与偏移语义', () => {
     expect(isDaytime['beijing']).toBe(false);
     expect(isDaytime['tokyo']).toBe(false);
   });
+
+  it('已选城市列表写入 localStorage，时间状态不写入', () => {
+    useTimeStore.getState().removeCity('sydney');
+
+    const stored = JSON.parse(
+      localStorage.getItem('world-time-cities') ?? '{}'
+    );
+    expect(stored.state.selectedCities).not.toContain('sydney');
+    expect(stored.state.selectedCities).toContain('los-angeles');
+    expect(Object.keys(stored.state)).toEqual(['selectedCities']);
+
+    useTimeStore.getState().addCity('sydney');
+  });
 });

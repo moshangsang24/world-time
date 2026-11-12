@@ -8,6 +8,19 @@ import { SunPositionCalculator } from './sunCalculations';
  */
 export class TimeFormatter {
   /**
+   * 格式化分钟数偏移，如 +30分钟、-1小时、+2小时15分钟
+   */
+  static formatOffsetMinutes(offset: number): string {
+    const sign = offset >= 0 ? '+' : '-';
+    const hours = Math.floor(Math.abs(offset) / 60);
+    const minutes = Math.abs(offset) % 60;
+
+    if (hours === 0) return `${sign}${minutes}分钟`;
+    if (minutes === 0) return `${sign}${hours}小时`;
+    return `${sign}${hours}小时${minutes}分钟`;
+  }
+
+  /**
    * 时区缩写，如 PST / PDT。固定用 en-US，否则中文环境下会得到 GMT-8。
    */
   static formatZoneAbbr(dateTime: DateTime): string {
@@ -144,9 +157,38 @@ export class TimeCalculator {
   }
 
   /**
-   * 获取时区列表（按UTC偏移排序）
+   * 某个时刻相对基准时区的时差。
+   * hours：比基准快（正）或慢（负）多少小时，按当时的实际偏移算，含夏令时；
+   * dayDelta：当地日期比基准日期早 / 晚几天（-1 昨天，0 同一天，1 明天）。
    */
-  static getSortedTimezones(cities: CityData[]): Array<{
+  static differenceFromZone(
+    localTime: DateTime,
+    baseTimezone: string
+  ): { hours: number; dayDelta: number } {
+    const baseTime = localTime.setZone(baseTimezone);
+    const dayDelta = Math.round(
+      localTime
+        .startOf('day')
+        .setZone('utc', { keepLocalTime: true })
+        .diff(
+          baseTime.startOf('day').setZone('utc', { keepLocalTime: true }),
+          'days'
+        ).days
+    );
+
+    return {
+      hours: (localTime.offset - baseTime.offset) / 60,
+      dayDelta,
+    };
+  }
+
+  /**
+   * 获取时区列表（按当前实际 UTC 偏移排序，含夏令时）
+   */
+  static getSortedTimezones(
+    cities: CityData[],
+    at: DateTime = DateTime.now()
+  ): Array<{
     timezone: string;
     offset: number;
     cities: CityData[];
@@ -156,7 +198,7 @@ export class TimeCalculator {
     cities.forEach(city => {
       if (!timezoneMap.has(city.timezone)) {
         timezoneMap.set(city.timezone, {
-          offset: city.utcOffset,
+          offset: at.setZone(city.timezone).offset / 60,
           cities: []
         });
       }

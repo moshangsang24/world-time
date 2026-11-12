@@ -5,9 +5,11 @@ import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
 import { I18nFormatters } from '@utils/formatters';
 import type { CityData } from '@/types/time';
+import { DateTime } from 'luxon';
 
 interface TimezoneGroupProps {
   timezone: string;
+  utcOffset: number; // 当前实际偏移（小时）
   cities: CityData[];
   selectedCities: string[];
   onCitySelect: (cityId: string) => void;
@@ -15,12 +17,12 @@ interface TimezoneGroupProps {
 }
 
 const TimezoneGroup: React.FC<TimezoneGroupProps> = ({
+  utcOffset,
   cities,
   selectedCities,
   onCitySelect,
   language,
 }) => {
-  const utcOffset = cities[0]?.utcOffset || 0;
   const formatOffset = (offset: number) => {
     const hours = Math.floor(Math.abs(offset));
     const minutes = (Math.abs(offset) % 1) * 60;
@@ -91,6 +93,10 @@ const TimezoneGroup: React.FC<TimezoneGroupProps> = ({
 
 export const TimezoneSelector: React.FC = () => {
   const { selectedCities, addCity } = useTimeStore();
+  // 只取到小时：偏移只会在整点（夏令时切换）变化，避免每秒重新分组
+  const currentHour = useTimeStore(state =>
+    state.baseTime.startOf('hour').toMillis()
+  );
   const { language } = useSettingsStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'offset' | 'name' | 'country'>('offset');
@@ -130,9 +136,11 @@ export const TimezoneSelector: React.FC = () => {
           } else if (sortBy === 'country') {
             return a.country.localeCompare(b.country);
           }
-          return a.utcOffset - b.utcOffset;
+          return a.name.localeCompare(b.name);
         }),
-        utcOffset: cities[0].utcOffset,
+        // 当前实际偏移（小时），含夏令时
+        utcOffset:
+          DateTime.fromMillis(currentHour).setZone(timezone).offset / 60,
       }))
       .sort((a, b) => {
         if (sortBy === 'offset') {
@@ -147,7 +155,7 @@ export const TimezoneSelector: React.FC = () => {
       filteredCities: filtered,
       timezoneGroups: sortedGroups,
     };
-  }, [searchQuery, sortBy, language]);
+  }, [searchQuery, sortBy, language, currentHour]);
 
   const handleCitySelect = (cityId: string) => {
     if (!selectedCities.includes(cityId)) {
@@ -227,10 +235,11 @@ export const TimezoneSelector: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {timezoneGroups.map(({ timezone, cities }) => (
+            {timezoneGroups.map(({ timezone, cities, utcOffset }) => (
               <TimezoneGroup
                 key={timezone}
                 timezone={timezone}
+                utcOffset={utcOffset}
                 cities={cities}
                 selectedCities={selectedCities}
                 onCitySelect={handleCitySelect}

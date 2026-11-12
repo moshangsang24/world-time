@@ -19,7 +19,6 @@ export interface AppSettings {
 }
 
 export interface UserPreferences extends AppSettings {
-  selectedCities: string[];
   customCities: string[];
   lastUsedTimeOffset: number;
 }

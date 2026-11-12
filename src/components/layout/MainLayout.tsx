@@ -40,14 +40,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   }, [isMd]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* 顶部导航栏 */}
       <Header 
         onSettingsClick={handleSettingsClick}
         onInfoClick={handleInfoClick}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* 侧边栏 */}
         <Sidebar 
           isOpen={sidebarOpen}
@@ -57,13 +57,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         {/* 主要内容区域 */}
         <main 
           className={`
-            flex-1 flex flex-col overflow-hidden
+            flex-1 min-w-0 flex flex-col overflow-hidden
             ${isMd && sidebarOpen ? 'ml-0' : ''}
             transition-all duration-300 ease-in-out
           `}
         >
           {/* 3D可视化区域 */}
-          <div className="flex-1 relative">
+          <div className="flex-1 min-h-0 relative">
             {children}
           </div>
 

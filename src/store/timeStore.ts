@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { DateTime } from 'luxon';
 import type { TimeState, CityData, CityTimeData } from '@/types/time';
 import type { SunPosition } from '@/types/geography';
@@ -59,140 +59,163 @@ const nowInBaseZone = (): DateTime =>
 // 实时更新定时器
 let realTimeInterval: ReturnType<typeof setInterval> | null = null;
 
+// 只持久化已选城市列表；时间相关状态每次加载都从"现在"开始
+const STORAGE_KEY = 'world-time-cities';
+
 export const useTimeStore = create<TimeStore>()(
-  subscribeWithSelector((set, get) => ({
-    // 初始状态
-    baseTime: nowInBaseZone(),
-    isRealTime: true,
-    timeOffset: 0,
-    anchorTime: null,
-    cities: [],
-    selectedCities: DEFAULT_SELECTED_CITIES,
-    is24HourFormat: true,
-    showSeconds: true,
-
-    // 时间控制方法
-    // 偏移相对"离开实时模式那一刻"冻结的锚点计算，而不是每次取 now，
-    // 这样隔一会儿再滚动不会跳变。偏移是经过的分钟数，跨夏令时切换也正确。
-    setTimeOffset: (offset: number) => {
-      const limit = TIME_CONSTANTS.MINUTES_PER_DAY;
-      const clampedOffset = Math.max(-limit, Math.min(limit, offset));
-      const anchorTime = get().anchorTime ?? nowInBaseZone();
-
-      get().stopRealTimeMode();
-      set({
-        anchorTime,
-        timeOffset: clampedOffset,
-        baseTime: anchorTime.plus({ minutes: clampedOffset }),
-        isRealTime: false,
-      });
-
-      get().updateCityTimes();
-    },
-
-    resetToRealTime: () => {
-      set({
+  subscribeWithSelector(
+    persist(
+      (set, get) => ({
+        // 初始状态
+        baseTime: nowInBaseZone(),
+        isRealTime: true,
         timeOffset: 0,
         anchorTime: null,
-        isRealTime: true,
-        baseTime: nowInBaseZone(),
-      });
+        cities: [],
+        selectedCities: DEFAULT_SELECTED_CITIES,
+        is24HourFormat: true,
+        showSeconds: true,
 
-      get().updateCityTimes();
-      get().startRealTimeMode();
-    },
+        // 时间控制方法
+        // 偏移相对"离开实时模式那一刻"冻结的锚点计算，而不是每次取 now，
+        // 这样隔一会儿再滚动不会跳变。偏移是经过的分钟数，跨夏令时切换也正确。
+        setTimeOffset: (offset: number) => {
+          const limit = TIME_CONSTANTS.MINUTES_PER_DAY;
+          const clampedOffset = Math.max(-limit, Math.min(limit, offset));
+          const anchorTime = get().anchorTime ?? nowInBaseZone();
 
-    // 实时 → 暂停：冻结在当前时刻；暂停 → 实时：偏移归零并恢复走动
-    toggleRealTime: () => {
-      if (get().isRealTime) {
-        get().setTimeOffset(0);
-      } else {
-        get().resetToRealTime();
-      }
-    },
+          get().stopRealTimeMode();
+          set({
+            anchorTime,
+            timeOffset: clampedOffset,
+            baseTime: anchorTime.plus({ minutes: clampedOffset }),
+            isRealTime: false,
+          });
 
-    // 城市管理方法
-    addCity: (cityId: string) => {
-      set(state => {
-        if (!state.selectedCities.includes(cityId)) {
-          return {
-            selectedCities: [...state.selectedCities, cityId],
-          };
-        }
-        return state;
-      });
-      
-      get().updateCityTimes();
-    },
-
-    removeCity: (cityId: string) => {
-      set(state => ({
-        selectedCities: state.selectedCities.filter(id => id !== cityId),
-      }));
-      
-      get().updateCityTimes();
-    },
-
-    setSelectedCities: (cityIds: string[]) => {
-      set({ selectedCities: cityIds });
-      get().updateCityTimes();
-    },
-
-    // 设置方法
-    setTimeFormat: (is24Hour: boolean) => {
-      set({ is24HourFormat: is24Hour });
-      get().updateCityTimes();
-    },
-
-    setShowSeconds: (show: boolean) => {
-      set({ showSeconds: show });
-      get().updateCityTimes();
-    },
-
-    // 更新城市时间
-    updateCityTimes: () => {
-      const { selectedCities, baseTime, is24HourFormat, showSeconds } = get();
-      const cityData = getCitiesByIds(selectedCities);
-      const sunPosition = SunPositionCalculator.calculateSunPosition(baseTime);
-      
-      const cities = cityData.map(city => {
-        const cityTimeData = calculateCityTime(city, baseTime, sunPosition);
-        
-        // 根据设置格式化时间字符串
-        const format = is24HourFormat 
-          ? (showSeconds ? 'HH:mm:ss' : 'HH:mm')
-          : (showSeconds ? 'h:mm:ss a' : 'h:mm a');
-          
-        return {
-          ...cityTimeData,
-          timeString: cityTimeData.currentTime.toFormat(format),
-        };
-      });
-      
-      set({ cities });
-    },
-
-    // 实时模式管理
-    startRealTimeMode: () => {
-      if (realTimeInterval) {
-        clearInterval(realTimeInterval);
-      }
-      
-      realTimeInterval = setInterval(() => {
-        if (get().isRealTime) {
-          set({ baseTime: nowInBaseZone() });
           get().updateCityTimes();
-        }
-      }, UI_CONSTANTS.UPDATE_INTERVAL);
-    },
+        },
 
-    stopRealTimeMode: () => {
-      if (realTimeInterval) {
-        clearInterval(realTimeInterval);
-        realTimeInterval = null;
+        resetToRealTime: () => {
+          set({
+            timeOffset: 0,
+            anchorTime: null,
+            isRealTime: true,
+            baseTime: nowInBaseZone(),
+          });
+
+          get().updateCityTimes();
+          get().startRealTimeMode();
+        },
+
+        // 实时 → 暂停：冻结在当前时刻；暂停 → 实时：偏移归零并恢复走动
+        toggleRealTime: () => {
+          if (get().isRealTime) {
+            get().setTimeOffset(0);
+          } else {
+            get().resetToRealTime();
+          }
+        },
+
+        // 城市管理方法
+        addCity: (cityId: string) => {
+          set(state => {
+            if (!state.selectedCities.includes(cityId)) {
+              return {
+                selectedCities: [...state.selectedCities, cityId],
+              };
+            }
+            return state;
+          });
+      
+          get().updateCityTimes();
+        },
+
+        removeCity: (cityId: string) => {
+          set(state => ({
+            selectedCities: state.selectedCities.filter(id => id !== cityId),
+          }));
+      
+          get().updateCityTimes();
+        },
+
+        setSelectedCities: (cityIds: string[]) => {
+          set({ selectedCities: cityIds });
+          get().updateCityTimes();
+        },
+
+        // 设置方法
+        setTimeFormat: (is24Hour: boolean) => {
+          set({ is24HourFormat: is24Hour });
+          get().updateCityTimes();
+        },
+
+        setShowSeconds: (show: boolean) => {
+          set({ showSeconds: show });
+          get().updateCityTimes();
+        },
+
+        // 更新城市时间
+        updateCityTimes: () => {
+          const { selectedCities, baseTime, is24HourFormat, showSeconds } = get();
+          const cityData = getCitiesByIds(selectedCities);
+          const sunPosition = SunPositionCalculator.calculateSunPosition(baseTime);
+      
+          const cities = cityData.map(city => {
+            const cityTimeData = calculateCityTime(city, baseTime, sunPosition);
+        
+            // 根据设置格式化时间字符串
+            const format = is24HourFormat 
+              ? (showSeconds ? 'HH:mm:ss' : 'HH:mm')
+              : (showSeconds ? 'h:mm:ss a' : 'h:mm a');
+          
+            return {
+              ...cityTimeData,
+              timeString: cityTimeData.currentTime.toFormat(format),
+            };
+          });
+      
+          set({ cities });
+        },
+
+        // 实时模式管理
+        startRealTimeMode: () => {
+          if (realTimeInterval) {
+            clearInterval(realTimeInterval);
+          }
+      
+          realTimeInterval = setInterval(() => {
+            if (get().isRealTime) {
+              set({ baseTime: nowInBaseZone() });
+              get().updateCityTimes();
+            }
+          }, UI_CONSTANTS.UPDATE_INTERVAL);
+        },
+
+        stopRealTimeMode: () => {
+          if (realTimeInterval) {
+            clearInterval(realTimeInterval);
+            realTimeInterval = null;
+          }
+        },
+      }),
+      {
+        name: STORAGE_KEY,
+        partialize: state => ({ selectedCities: state.selectedCities }),
+        // 丢弃已不存在的城市 id；列表为空时退回默认
+        merge: (persisted, current) => {
+          const stored = (persisted as Partial<TimeState> | undefined)
+            ?.selectedCities;
+          const valid = Array.isArray(stored)
+            ? getCitiesByIds(stored).map(city => city.id)
+            : [];
+          return {
+            ...current,
+            selectedCities: valid.length > 0 ? valid : current.selectedCities,
+          };
+        },
       }
-    },
-  }))
+    )
+  )
 );
 
 // 订阅选中城市变化，自动更新城市时间

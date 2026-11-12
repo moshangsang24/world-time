@@ -1,11 +1,17 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Clock, Calendar } from 'lucide-react';
 import { useTimeStore } from '@store/timeStore';
 import { BASE_ZONE, TIME_CONSTANTS } from '@data/constants';
 import { TimeFormatter } from '@utils/timeCalculations';
 import { PerformanceUtils } from '@utils/coordinateUtils';
+import { useScrollControl } from '@hooks/useScrollControl';
 
 export const TimeSlider: React.FC = () => {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // 鼠标在时间控制区上滚动同样调整时间；键盘由地图那边统一监听
+  useScrollControl({ targetRef: rootRef, keyboard: false });
+
   const { 
     baseTime, 
     isRealTime, 
@@ -49,16 +55,7 @@ export const TimeSlider: React.FC = () => {
     setTimeOffset(localOffset);
   };
 
-  const formatOffsetDisplay = (offset: number): string => {
-    const hours = Math.floor(Math.abs(offset) / 60);
-    const minutes = Math.abs(offset) % 60;
-    const sign = offset >= 0 ? '+' : '-';
-    
-    if (minutes === 0) {
-      return `${sign}${hours}小时`;
-    }
-    return `${sign}${hours}小时${minutes}分钟`;
-  };
+  const formatOffsetDisplay = TimeFormatter.formatOffsetMinutes;
 
   const getOffsetColor = (offset: number): string => {
     if (offset === 0) return 'text-green-600 dark:text-green-400';
@@ -80,7 +77,10 @@ export const TimeSlider: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
+    <div
+      ref={rootRef}
+      className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4"
+    >
       <div className="max-w-6xl mx-auto">
         {/* 标题和控制按钮 */}
         <div className="flex items-center justify-between mb-4">
@@ -220,7 +220,7 @@ export const TimeSlider: React.FC = () => {
 
         {/* 使用说明 */}
         <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 text-center">
-          拖拽滑块或使用快捷按钮来改变时间 • 滚动鼠标滚轮也可以控制时间变化
+          拖拽滑块或使用快捷按钮来改变时间 • 在地图或这里滚动鼠标滚轮，每格 1 分钟
         </div>
       </div>
     </div>

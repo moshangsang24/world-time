@@ -3,6 +3,8 @@ import { Clock, MapPin, Sun, Moon } from 'lucide-react';
 import type { CityTimeData } from '@/types/time';
 import { I18nFormatters } from '@utils/formatters';
 import { useSettingsStore } from '@store/settingsStore';
+import { TimeCalculator } from '@utils/timeCalculations';
+import { BASE_ZONE } from '@data/constants';
 
 interface CityTimeCardProps {
   city: CityTimeData;
@@ -26,6 +28,20 @@ export const CityTimeCard: React.FC<CityTimeCardProps> = ({
   const cityName = I18nFormatters.getCityName(city, language);
   const weekday = I18nFormatters.formatWeekday(city.currentTime, language);
   
+  // 相对基准时区的时差与日期差
+  const difference = TimeCalculator.differenceFromZone(
+    city.currentTime,
+    BASE_ZONE.timezone
+  );
+  const differenceText =
+    difference.hours === 0
+      ? '与基准同时'
+      : `比基准${difference.hours > 0 ? '快' : '慢'} ${Math.abs(
+          difference.hours
+        )} 小时`;
+  const dayText =
+    difference.dayDelta > 0 ? '明天' : difference.dayDelta < 0 ? '昨天' : null;
+
   const handleCardClick = () => {
     onSelect?.(city.id);
   };
@@ -105,6 +121,16 @@ export const CityTimeCard: React.FC<CityTimeCardProps> = ({
         <div className="text-xs text-gray-600 dark:text-gray-400">
           <div className="truncate">{city.localDate}</div>
           <div className="truncate">{weekday}</div>
+          {!isBase && (
+            <div className="truncate mt-0.5">
+              {differenceText}
+              {dayText && (
+                <span className="ml-1 px-1 rounded bg-gray-100 dark:bg-gray-700">
+                  {dayText}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
