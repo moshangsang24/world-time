@@ -4,7 +4,7 @@
 
 用网页可视化全世界的时间与太阳光照：以洛杉矶时间（`America/Los_Angeles`）为基准，通过滚轮前后滚动 ±24 小时，观察各时区时间与昼夜的变化。基准时区集中定义在 `src/data/constants.ts` 的 `BASE_ZONE`，不要在别处硬编码时区名或“洛杉矶时间”文案。
 
-需求与技术方案见 `docs/项目需求文档.md`、`docs/技术方案文档.md`，当前的修复计划见 `docs/修复方案.md`。**这两份文档描述的是目标态，大量功能尚未实现，不能当作现状依据**（差异见文末）。
+需求与技术方案见 `docs/项目需求文档.md`、`docs/技术方案文档.md`，当前的修复计划见 `docs/修复方案.md`。**这两份文档描述的是目标态，大量功能尚未实现，不能当作现状依据**；`README.md` 描述的是现状。
 
 ## 常用命令
 
@@ -43,7 +43,7 @@ main.tsx → App → MainLayout
   - `drawNightShade.ts`：按 1° 网格逐格算太阳高度角着色（含曙暮光渐变），再平滑放大。
   - `drawOverlay.ts`：晨昏线、太阳直射点、底部地方平时刻度、城市点与防重叠标签。
   - `palette.ts`：浅色 / 深色两套底图配色。
-- **`Earth3D` / `SunlightShader` / `CityMarkers`**：完整 3D 实现，但只被 `components/visualization/index.ts` 导出，应用里没有 `<Canvas>`，**从未渲染**。README 说的“3D 地球”是目标态。
+- **`Earth3D` / `SunlightShader` / `CityMarkers`**：完整 3D 实现，但只被 `components/visualization/index.ts` 导出，应用里没有 `<Canvas>`，**从未渲染**。
 - 没有 2D/3D 切换；`settingsStore.preferredView` 没有任何消费者。
 
 ```
@@ -51,7 +51,7 @@ src/components/{common,layout,time,visualization}
 src/hooks/  src/store/  src/utils/  src/data/  src/types/
 ```
 
-各目录有 `index.ts` barrel，但业务代码基本不用；`src/styles/` 为空，全局样式只在 `src/index.css`。
+各目录有 `index.ts` barrel，但业务代码基本不用；全局样式只在 `src/index.css`。
 
 ## 状态管理与数据流
 
