@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { DateTime } from 'luxon';
-import type { TimeState, CityTimeData } from '@/types/time';
+import type { TimeState, CityData, CityTimeData } from '@/types/time';
+import type { SunPosition } from '@/types/geography';
+import { SunPositionCalculator } from '@utils/sunCalculations';
 import { DEFAULT_SELECTED_CITIES, getCitiesByIds } from '@data/cities';
 import { BASE_ZONE, TIME_CONSTANTS, UI_CONSTANTS } from '@data/constants';
 
@@ -28,20 +30,25 @@ interface TimeActions {
 
 type TimeStore = TimeState & TimeActions;
 
-// 计算城市时间数据
+// 计算城市时间数据。昼夜在这里统一计算，所有组件读到的是同一份结果。
 const calculateCityTime = (
-  cityData: ReturnType<typeof getCitiesByIds>[0],
-  baseTime: DateTime
+  cityData: CityData,
+  baseTime: DateTime,
+  sunPosition: SunPosition
 ): CityTimeData => {
   const cityTime = baseTime.setZone(cityData.timezone);
-  
+
   return {
     ...cityData,
     currentTime: cityTime,
     localDate: cityTime.toFormat('yyyy-MM-dd'),
     timeString: cityTime.toFormat('HH:mm:ss'),
     utcOffsetString: cityTime.toFormat('ZZ'),
-    isDaytime: true, // 暂时设为true，后续会根据太阳位置计算
+    isDaytime: SunPositionCalculator.isDaylight(
+      cityData.latitude,
+      cityData.longitude,
+      sunPosition
+    ),
   };
 };
 
@@ -146,9 +153,10 @@ export const useTimeStore = create<TimeStore>()(
     updateCityTimes: () => {
       const { selectedCities, baseTime, is24HourFormat, showSeconds } = get();
       const cityData = getCitiesByIds(selectedCities);
+      const sunPosition = SunPositionCalculator.calculateSunPosition(baseTime);
       
       const cities = cityData.map(city => {
-        const cityTimeData = calculateCityTime(city, baseTime);
+        const cityTimeData = calculateCityTime(city, baseTime, sunPosition);
         
         // 根据设置格式化时间字符串
         const format = is24HourFormat 

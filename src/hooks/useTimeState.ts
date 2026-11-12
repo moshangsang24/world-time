@@ -3,19 +3,16 @@ import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
 import { TimeFormatter } from '@utils/timeCalculations';
 import { BASE_ZONE } from '@data/constants';
-import { useSunPosition } from './useSunPosition';
 import type { CityTimeData } from '@/types/time';
 
 export const useTimeState = () => {
   const timeState = useTimeStore();
   const { language, timeFormat, showSeconds } = useSettingsStore();
-  const { isDaylight } = useSunPosition();
 
-  // 增强的城市时间数据（包含太阳位置计算）
+  // 按用户设置重新格式化的城市时间数据（昼夜已由 timeStore 算好）
   const enhancedCities = useMemo<CityTimeData[]>(() => {
     return timeState.cities.map(city => ({
       ...city,
-      isDaytime: isDaylight(city.latitude, city.longitude),
       timeString: TimeFormatter.formatTime(
         city.currentTime, 
         timeFormat, 
@@ -23,7 +20,7 @@ export const useTimeState = () => {
       ),
       localDate: TimeFormatter.formatDate(city.currentTime, language),
     }));
-  }, [timeState.cities, isDaylight, timeFormat, showSeconds, language]);
+  }, [timeState.cities, timeFormat, showSeconds, language]);
 
   // 基准时间的格式化显示
   const formattedBaseTime = useMemo(() => {

@@ -62,7 +62,7 @@ src/hooks/  src/store/  src/utils/  src/data/  src/types/
 
 Hooks 分工：
 
-- `useTimeState`：时间展示 + 给城市补正确的 `isDaytime`，返回增强后的 `cities`。**要显示/判断昼夜必须用它。**
+- `useTimeState`：时间展示，按用户设置重新格式化 `cities` 的时间字符串。
 - `useSunPosition`：由 `baseTime` 计算太阳位置、晨昏线、日出日落。
 - `useScrollControl`：document 级 wheel / keydown。
 - `useWindowSize` / `useBreakpoint`：响应式（768px 断点）。
@@ -77,10 +77,10 @@ Hooks 分工：
 - **不要** `toJSDate()` + `Intl.DateTimeFormat` 且不传 `timeZone`——会按运行环境时区格式化（`utils/formatters.ts` 里有这种写法，跨日会显示错星期）。
 - 偏移是**经过的分钟数**（对绝对时刻加减），不是墙上时钟的分钟数；洛杉矶有夏令时，不要改成按本地时间字段加减。
 - `CityData.utcOffset` 单位是**小时**，是标准时、**不随夏令时变化**；当前真实偏移用 `setZone(...).offset / 60` 或 `toFormat('ZZ')`。排序/分组仍在用静态值，DST 期间会偏差一小时。
-- 太阳位置来自 `utils/sunCalculations.ts` 的自研 NOAA 近似；`suncalc` 只在 `calculateSunlightData` 里用了 `getTimes`，且默认坐标 `(0,0)`、UI 未消费。
-- **已知致命 bug**：`sunPosition.longitude` 用的是 `sunTrueLong + 180`（黄经），缺少地球自转（GMST/时角），**不是太阳直射点经度**，一天内几乎不变。`isDaylight`、2D 昼夜色带、城市昼夜图标因此整体错位。修正方向：`lng = normalize(RA - GMST)`，或最小改动 `normalize(-hourAngle)`，或直接用 `SunCalc.getPosition`。注意它返回**弧度**。
+- 太阳位置来自 `utils/sunCalculations.ts` 的 NOAA 算法（`SunPositionCalculator`），测试里用 `suncalc` 做对照。`SunPosition.declination` / `longitude` 就是直射点的纬度 / 经度，单位是**度**；`suncalc` 返回的是**弧度**。
+- 某地太阳高度角用 `SunPositionCalculator.altitudeAt(lat, lng, sunPosition)`；晨昏线用 `calculateDayNightBoundary`（按经度采样，用 `atan` 而不是 `atan2`）。
 - 白昼阈值：太阳高度角 `> -0.833°`。
-- `timeStore.calculateCityTime` 里 `isDaytime` 硬编码为 `true`；`WorldClock` 直接读 `useTimeStore().cities`，所以**侧栏永远显示太阳**。需要正确昼夜时用 `useTimeState()`。
+- 城市的 `isDaytime` 在 `timeStore.updateCityTimes()` 里统一计算，`useTimeStore().cities` 和 `useTimeState().cities` 都可以直接用，不要在组件里另算一套。
 - 经纬度 → 3D 统一用 `CoordinateUtils.latLngToVector3`：入参是**度**；北极是 `+Y`；`lng=0 → +X`，`lng=+90 → -Z`；默认半径 2。逆变换是 `vector3ToLatLng`。项目里另有 3 份重复/内联的坐标转换，新增代码不要再复制。
 
 ## 代码约定
@@ -97,7 +97,3 @@ Hooks 分工：
 ## 已知问题
 
 所有 bug、技术债与文档差异统一记录在 **`docs/当前问题.md`**，按 P0 / P1 / P2 分级，附位置、现象、影响与修复建议。改动相关模块前先读该文档；修好一条就把对应条目勾选为完成。
-
-会直接影响日常开发的一点（详见该文档）：
-
-- 太阳直射点经度计算错误（P0-1），所有昼夜相关结果在修复前都不可信。

@@ -102,4 +102,17 @@ describe('timeStore 基准时区与偏移语义', () => {
       '11-12 15:00'
     );
   });
+
+  it('城市昼夜由太阳位置决定', () => {
+    // 洛杉矶正午：洛杉矶、纽约是白天；北京凌晨 4 点、东京凌晨 5 点是夜晚
+    const { cities } = useTimeStore.getState();
+    const isDaytime = Object.fromEntries(
+      cities.map(city => [city.id, city.isDaytime])
+    );
+
+    expect(isDaytime['los-angeles']).toBe(true);
+    expect(isDaytime['new-york']).toBe(true);
+    expect(isDaytime['beijing']).toBe(false);
+    expect(isDaytime['tokyo']).toBe(false);
+  });
 });

@@ -3,13 +3,12 @@ export interface Coordinates {
   longitude: number;
 }
 
+// 所有角度单位为度；经度东正西负
 export interface SunPosition {
-  declination: number; // 太阳赤纬角
-  hourAngle: number; // 时角
-  azimuth: number; // 方位角
-  altitude: number; // 高度角
-  longitude: number; // 太阳经度
-  rightAscension: number; // 赤经
+  declination: number; // 太阳赤纬 = 直射点纬度
+  longitude: number; // 直射点经度，[-180, 180)
+  rightAscension: number; // 赤经，[0, 360)
+  equationOfTime: number; // 均时差（分钟）
 }
 
 export interface DayNightBoundary {
