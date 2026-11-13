@@ -2,9 +2,9 @@
 
 ## 项目目标
 
-用网页可视化全世界的时间与太阳光照：以洛杉矶时间（`America/Los_Angeles`）为基准，通过滚轮前后滚动 ±24 小时，观察各时区时间与昼夜的变化。基准时区集中定义在 `src/data/constants.ts` 的 `BASE_ZONE`，不要在别处硬编码时区名或“洛杉矶时间”文案。
+用网页可视化全世界的时间与太阳光照：以一个基准城市的时间为准（默认洛杉矶，用户可切换），通过滚轮前后滚动 ±24 小时，观察各时区时间与昼夜的变化。运行时的基准一律读 `timeStore.baseZone`（`{ timezone, label, cityId }`），默认值是 `src/data/constants.ts` 的 `DEFAULT_BASE_CITY_ID`；不要在别处硬编码时区名或“洛杉矶时间”文案。
 
-需求与技术方案见 `docs/项目需求文档.md`、`docs/技术方案文档.md`，当前的修复计划见 `docs/修复方案.md`。**这两份文档描述的是目标态，大量功能尚未实现，不能当作现状依据**；`README.md` 描述的是现状。
+需求与技术方案见 `docs/项目需求文档.md`、`docs/技术方案文档.md`，已完成的修复与功能计划见 `docs/修复方案.md`、`docs/功能方案二.md`。**这两份文档描述的是目标态，大量功能尚未实现，不能当作现状依据**；`README.md` 描述的是现状。
 
 ## 常用命令
 
@@ -12,7 +12,7 @@
 npm run dev         # http://localhost:3000（vite 配置了 open:true）
 npm run type-check  # tsc --noEmit
 npm run build       # = tsc && vite build
-npm run lint        # 0 error；还有 16 个 warning（no-explicit-any 为主）
+npm run lint        # 0 error；还有 14 个 warning（no-explicit-any 为主）
 npm test            # vitest run，测试文件为 src/**/*.test.{ts,tsx}
 ```
 
@@ -31,7 +31,8 @@ React 18 + TypeScript + Vite 5 + Zustand 4 + Luxon + Tailwind CSS 3。
 main.tsx → App → MainLayout
                     ├─ Header（主题切换、基准时间、实时/偏移状态）
                     ├─ Sidebar → WorldClock → CityTimeCard
-                    │            TimezoneSelector
+                    │            AddCityPanel（在线搜索 + 常用城市）
+                    ├─ SettingsPanel（齿轮打开：基准城市、跟随设备时区、卡片样式、主题）
                     ├─ EarthVisualization → WorldMap2D   ← 唯一实际渲染的视图
                     └─ TimeSlider
 ```
@@ -57,13 +58,16 @@ src/hooks/  src/store/  src/utils/  src/data/  src/types/
 
 三份 Zustand store，互不直接调用，跨 store 的聚合放在 hooks 里。
 
-1. **`timeStore`（核心）**：只有 `selectedCities` 持久化到 `world-time-cities`，时间状态不持久化。
-   - `baseTime: DateTime`（Luxon，`BASE_ZONE.timezone`）是**唯一时间事实来源**。
+1. **`timeStore`（核心）**：持久化 `selectedCities`、`customCities`、`baseCityId`、`followDeviceZone` 到 `world-time-cities`（`merge` 里校验并丢弃无效数据），时间状态不持久化。
+   - `baseZone` 由 `resolveBaseZone()` 从 `baseCityId` / `followDeviceZone` / 城市列表推出；改这几项后调用 `applyBaseZone()`，它只把 `baseTime`、`anchorTime` 换到新时区表示，时刻、暂停状态和偏移都不变。
+   - 跟随设备时区：设备时区来自 `TimeCalculator.getDeviceTimeZone()`（测试里 mock 它），实时走秒时检查是否变化；列表里没有同时区城市时 `baseZone.cityId` 为 `null`，标签是“本机时间”。
+   - 基准城市不能移除；`setBaseCity` 会关闭跟随设备，城市不在列表里时先加入。
+   - `baseTime: DateTime`（Luxon，`baseZone.timezone`）是**唯一时间事实来源**。
    - `timeOffset: number`，单位**分钟**，范围 ±1440。
-   - `cities` 是由 `selectedCities` 派生出的 `CityTimeData[]`。
+   - `cities` 是由 `selectedCities` 派生出的 `CityTimeData[]`。城市 id 先查 `MAJOR_CITIES`，再查 `customCities`（搜索添加的城市，id 前缀 `custom-`）。
    - `anchorTime`：离开实时模式那一刻冻结的时刻，`baseTime = anchorTime + timeOffset`；实时模式下为 `null`。
    - 模块加载时自动启动 1s interval（实时模式）并初始化城市，不是 React effect；HMR 时通过 `import.meta.hot.dispose` 清理。
-2. **`settingsStore`（persist 到 `world-time-settings`）**：主题（唯一真正可用的设置 UI）、语言、时间格式等。
+2. **`settingsStore`（persist 到 `world-time-settings`）**：主题、卡片样式 `cardStyle`（`digital` / `analog`）、语言、时间格式等。基准城市不在这里，在 `timeStore`。
 3. **`visualizationStore`**：主要服务未启用的 3D。实际只消费 `selectedCity`——它是“当前选中城市”的唯一来源，地图和侧栏都读写它。
 
 Hooks 分工：
@@ -88,8 +92,15 @@ Hooks 分工：
 - 太阳位置来自 `utils/sunCalculations.ts` 的 NOAA 算法（`SunPositionCalculator`），测试里用 `suncalc` 做对照。`SunPosition.declination` / `longitude` 就是直射点的纬度 / 经度，单位是**度**；`suncalc` 返回的是**弧度**。
 - 某地太阳高度角用 `SunPositionCalculator.altitudeAt(lat, lng, sunPosition)`；晨昏线用 `calculateDayNightBoundary`（按经度采样，用 `atan` 而不是 `atan2`）。
 - 白昼阈值：太阳高度角 `> -0.833°`。
+- 日出日落用 `SunPositionCalculator.sunTimesFor(cityTime, lat, lng)`（内部用 `suncalc`），按城市当地日期计算，极昼 / 极夜时返回 `polar`。
 - 城市的 `isDaytime` 在 `timeStore.updateCityTimes()` 里统一计算，`useTimeStore().cities` 和 `useTimeState().cities` 都可以直接用，不要在组件里另算一套。
 - 经纬度 → 3D 统一用 `CoordinateUtils.latLngToVector3`：入参是**度**；北极是 `+Y`；`lng=0 → +X`，`lng=+90 → -Z`；默认半径 2。逆变换是 `vector3ToLatLng`。项目里另有 3 份重复/内联的坐标转换，新增代码不要再复制。
+
+## 城市搜索
+
+- `utils/geocoding.ts` 调用 Open-Meteo 地理编码接口（无 key，支持中文），在**用户浏览器里**发请求。本开发容器的网络代理会拦截该域名，页面测试里用 Playwright `page.route` 模拟响应；单元测试用 `vi.stubGlobal('fetch', ...)`。
+- 在线结果若与某个预置城市同时区且经纬度相差 < 0.3°，按预置城市添加，避免重复。
+- 城市卡片的时区缩写用 `TimeFormatter.formatZoneAbbr`：有通用缩写的显示 `PST` / `GMT`，否则显示 `UTC+09:00`。
 
 ## 代码约定
 
@@ -97,7 +108,7 @@ Hooks 分工：
 - 组件用**命名导出** `export const X: React.FC<Props> = ...`，只有 `App` 用 default export；Props 接口写在组件文件内。
 - Hook `useXxx.ts`；store `xxxStore.ts` 导出 `useXxxStore`；工具类是 PascalCase 静态方法类（`TimeCalculator` / `TimeFormatter` / `SunPositionCalculator`）。
 - 注释和 UI 文案用中文，标识符英文。
-- 样式全部 Tailwind utility，`darkMode: 'class'`，主题由 `settingsStore` 在 `<html>` 上加 `light` / `dark`；不用 `@apply`、CSS Modules 或组件级 CSS 文件。
+- 样式全部 Tailwind utility（`primary` 色阶 50–900 已补齐，与 blue 一致），`darkMode: 'class'`，主题由 `settingsStore` 在 `<html>` 上加 `light` / `dark`；不用 `@apply`、CSS Modules 或组件级 CSS 文件。
 - import：跨目录用别名，同目录用相对路径，两种风格并存。可用别名：`@`、`@components`、`@utils`、`@hooks`、`@store`、`@data`。
   - **没有 `@types` 别名**（已删除，TypeScript 会把它当成 `node_modules/@types` 下的声明包）。类型导入用 `@/types/...` 或相对路径。
 - 新增城市：在 `src/data/cities.ts` 的 `MAJOR_CITIES` 里补 IANA 时区、经纬度、国家、静态 `utcOffset`（只用于排序/分组）。
