@@ -1,10 +1,6 @@
-// 基准时区：界面上的"主时间"、时差与偏移都以它为准。
-// 换基准只改这里；cityId 必须是 MAJOR_CITIES 里存在的城市。
-export const BASE_ZONE = {
-  timezone: 'America/Los_Angeles',
-  label: '洛杉矶时间',
-  cityId: 'los-angeles',
-} as const;
+// 默认基准城市：首次打开、或保存的基准城市已不存在时使用。
+// 运行时的基准由 timeStore.baseZone 决定，可在设置里切换。
+export const DEFAULT_BASE_CITY_ID = 'los-angeles';
 
 // 时间相关常量
 export const TIME_CONSTANTS = {

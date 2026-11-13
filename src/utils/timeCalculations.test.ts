@@ -26,6 +26,19 @@ describe('TimeFormatter', () => {
       'PDT'
     );
   });
+
+  it('没有通用缩写的时区显示为 UTC 偏移', () => {
+    const instant = '2026-11-12T20:00:00Z';
+    expect(TimeFormatter.formatZoneAbbr(at(instant, 'Asia/Tokyo'))).toBe(
+      'UTC+09:00'
+    );
+    expect(TimeFormatter.formatZoneAbbr(at(instant, 'Asia/Kolkata'))).toBe(
+      'UTC+05:30'
+    );
+    expect(TimeFormatter.formatZoneAbbr(at(instant, 'Europe/London'))).toBe(
+      'GMT'
+    );
+  });
 });
 
 describe('TimeCalculator.differenceFromZone', () => {

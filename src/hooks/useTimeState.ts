@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
 import { TimeFormatter } from '@utils/timeCalculations';
-import { BASE_ZONE } from '@data/constants';
 import type { CityTimeData } from '@/types/time';
 
 export const useTimeState = () => {
@@ -28,10 +27,16 @@ export const useTimeState = () => {
       time: TimeFormatter.formatTime(timeState.baseTime, timeFormat, showSeconds),
       date: TimeFormatter.formatDate(timeState.baseTime, language),
       utcOffset: TimeFormatter.formatUtcOffset(timeState.baseTime),
-      label: BASE_ZONE.label,
+      label: timeState.baseZone.label,
       zoneAbbr: TimeFormatter.formatZoneAbbr(timeState.baseTime),
     };
-  }, [timeState.baseTime, timeFormat, showSeconds, language]);
+  }, [
+    timeState.baseTime,
+    timeState.baseZone.label,
+    timeFormat,
+    showSeconds,
+    language,
+  ]);
 
   // 时间偏移的格式化显示
   const formattedTimeOffset = useMemo(() => {

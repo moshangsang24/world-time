@@ -1,60 +1,46 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Settings, Grid, List } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Clock3, Hash, Plus, RotateCcw } from 'lucide-react';
 import { CityTimeCard } from './CityTimeCard';
 import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
 import { useVisualizationStore } from '@store/visualizationStore';
-import { MAJOR_CITIES } from '@data/cities';
-import { BASE_ZONE } from '@data/constants';
 import { TimeFormatter } from '@utils/timeCalculations';
 
-type ViewMode = 'grid' | 'list';
+interface WorldClockProps {
+  /** 点"添加"时打开添加城市面板 */
+  onAddCity?: () => void;
+}
 
-export const WorldClock: React.FC = () => {
-  const { 
-    cities, 
-    selectedCities, 
-    baseTime,
-    isRealTime,
-    timeOffset,
-    addCity, 
-    removeCity,
-    resetToRealTime,
-  } = useTimeStore();
-  
-  const { language } = useSettingsStore();
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [showAddDialog, setShowAddDialog] = useState(false);
+export const WorldClock: React.FC<WorldClockProps> = ({ onAddCity }) => {
+  const cities = useTimeStore(state => state.cities);
+  const baseTime = useTimeStore(state => state.baseTime);
+  const baseZone = useTimeStore(state => state.baseZone);
+  const timeOffset = useTimeStore(state => state.timeOffset);
+  const isRealTime = useTimeStore(state => state.isRealTime);
+  const removeCity = useTimeStore(state => state.removeCity);
+  const setBaseCity = useTimeStore(state => state.setBaseCity);
+  const resetToRealTime = useTimeStore(state => state.resetToRealTime);
+
+  const cardStyle = useSettingsStore(state => state.cardStyle);
+  const setCardStyle = useSettingsStore(state => state.setCardStyle);
+
   // 选中城市与地图共用同一份状态
   const selectedCity = useVisualizationStore(state => state.selectedCity);
   const setSelectedCity = useVisualizationStore(
     state => state.setSelectedCity
   );
 
-  // 可添加的城市列表（排除已选择的）
-  const availableCities = useMemo(() => {
-    return MAJOR_CITIES.filter(city => !selectedCities.includes(city.id));
-  }, [selectedCities]);
-
-  // 按时区排序的城市
+  // 基准城市排第一，其余按当前实际 UTC 偏移（含夏令时）、再按名称排序
   const sortedCities = useMemo(() => {
     return [...cities].sort((a, b) => {
-      // 基准城市始终排第一
-      if (a.id === BASE_ZONE.cityId) return -1;
-      if (b.id === BASE_ZONE.cityId) return 1;
-      // 再按当前实际 UTC 偏移排序（含夏令时，不用静态 utcOffset）
-      if (a.currentTime.offset !== b.currentTime.offset) {
-        return a.currentTime.offset - b.currentTime.offset;
-      }
-      // 相同时区按名称排序
-      return a.name.localeCompare(b.name);
+      if (a.id === baseZone.cityId) return -1;
+      if (b.id === baseZone.cityId) return 1;
+      return (
+        a.currentTime.offset - b.currentTime.offset ||
+        a.name.localeCompare(b.name)
+      );
     });
-  }, [cities]);
-
-  const handleAddCity = (cityId: string) => {
-    addCity(cityId);
-    setShowAddDialog(false);
-  };
+  }, [cities, baseZone.cityId]);
 
   const handleRemoveCity = (cityId: string) => {
     removeCity(cityId);
@@ -67,172 +53,107 @@ export const WorldClock: React.FC = () => {
     setSelectedCity(selectedCity === cityId ? null : cityId);
   };
 
+  const styleOptions = [
+    { value: 'digital', label: '数字', icon: Hash },
+    { value: 'analog', label: '钟表', icon: Clock3 },
+  ] as const;
+
   return (
     <div className="h-full flex flex-col">
-      {/* 头部控制栏 */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              世界时钟
-            </h2>
-            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mt-1">
-              <span>
-                {BASE_ZONE.label}: {baseTime.toFormat('HH:mm:ss')}{' '}
-                {TimeFormatter.formatZoneAbbr(baseTime)}
+      {/* 头部 */}
+      <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-gray-700 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            世界时钟
+          </h2>
+          <button
+            type="button"
+            onClick={onAddCity}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium
+                       bg-primary-500 text-white hover:bg-primary-600 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            添加城市
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <span className="truncate">
+              {baseZone.label}{' '}
+              <span className="font-mono tabular-nums">
+                {baseTime.toFormat('HH:mm:ss')}
+              </span>{' '}
+              {TimeFormatter.formatZoneAbbr(baseTime)}
+            </span>
+            {timeOffset !== 0 && (
+              <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+                {TimeFormatter.formatOffsetMinutes(timeOffset)}
               </span>
-              {timeOffset !== 0 && (
-                <span className="ml-2 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/20 
-                               text-yellow-800 dark:text-yellow-400 rounded text-xs">
-                  时间偏移: {TimeFormatter.formatOffsetMinutes(timeOffset)}
-                </span>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
+            )}
             {!isRealTime && (
               <button
+                type="button"
                 onClick={resetToRealTime}
-                className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 
-                         transition-colors duration-200"
+                className="flex-shrink-0 p-1 rounded text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-gray-800"
+                title="回到实时"
+                aria-label="回到实时"
               >
-                回到实时
+                <RotateCcw className="w-3.5 h-3.5" />
               </button>
             )}
-            
-            {/* 视图模式切换 */}
-            <div className="flex bg-gray-100 dark:bg-gray-700 rounded p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === 'grid' 
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-                title="网格视图"
-              >
-                <Grid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === 'list' 
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-                title="列表视图"
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
+          </div>
 
-            {/* 添加城市按钮 */}
-            <button
-              onClick={() => setShowAddDialog(true)}
-              className="flex items-center px-3 py-2 bg-primary-500 text-white rounded 
-                       hover:bg-primary-600 transition-colors duration-200"
-              disabled={availableCities.length === 0}
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              添加城市
-            </button>
-
-            {/* 设置按钮 */}
-            <button
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 
-                       dark:hover:text-white transition-colors duration-200"
-              title="设置"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
+          {/* 数字 / 钟表切换 */}
+          <div
+            className="flex-shrink-0 flex p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800"
+            role="radiogroup"
+            aria-label="卡片样式"
+          >
+            {styleOptions.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={cardStyle === value}
+                onClick={() => setCardStyle(value)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                  cardStyle === value
+                    ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-white'
+                    : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* 城市列表 */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {cities.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-            <div className="text-6xl mb-4">🌍</div>
-            <h3 className="text-xl font-medium mb-2">还没有添加任何城市</h3>
-            <p className="text-center mb-4">点击"添加城市"按钮来添加您想关注的时区</p>
-            <button
-              onClick={() => setShowAddDialog(true)}
-              className="flex items-center px-4 py-2 bg-primary-500 text-white rounded 
-                       hover:bg-primary-600 transition-colors duration-200"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              添加第一个城市
-            </button>
-          </div>
-        ) : (
-          <div className={`
-            ${viewMode === 'grid' 
-              ? 'grid grid-cols-1 lg:grid-cols-2 gap-3' 
-              : 'space-y-3'
-            }
-          `}>
-            {sortedCities.map((city) => (
-              <CityTimeCard
-                key={city.id}
-                city={city}
-                isSelected={selectedCity === city.id}
-                isBase={city.id === BASE_ZONE.cityId}
-                onSelect={handleCitySelect}
-                onRemove={handleRemoveCity}
-                showRemoveButton={cities.length > 1}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 添加城市对话框 */}
-      {showAddDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                添加城市
-              </h3>
-              <button
-                onClick={() => setShowAddDialog(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 
-                         dark:hover:text-gray-200 transition-colors"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="space-y-2">
-              {availableCities.map((city) => (
-                <button
-                  key={city.id}
-                  onClick={() => handleAddCity(city.id)}
-                  className="w-full text-left p-3 rounded border border-gray-200 
-                           dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 
-                           transition-colors duration-200"
-                >
-                  <div className="font-medium text-gray-900 dark:text-white">
-                    {language === 'zh' ? city.name : city.nameEn}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {city.country} • UTC
-                    {baseTime.setZone(city.timezone).toFormat('ZZ')}
-                  </div>
-                </button>
-              ))}
-              
-              {availableCities.length === 0 && (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4">
-                  所有可用城市都已添加
-                </p>
-              )}
-            </div>
-          </div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-6">
+        <div
+          className={
+            cardStyle === 'analog' ? 'grid grid-cols-2 gap-3' : 'space-y-3'
+          }
+        >
+          {sortedCities.map(city => (
+            <CityTimeCard
+              key={city.id}
+              city={city}
+              variant={cardStyle}
+              baseTimezone={baseZone.timezone}
+              isSelected={selectedCity === city.id}
+              isBase={city.id === baseZone.cityId}
+              canRemove={cities.length > 1}
+              onSelect={handleCitySelect}
+              onRemove={handleRemoveCity}
+              onSetBase={setBaseCity}
+            />
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 };

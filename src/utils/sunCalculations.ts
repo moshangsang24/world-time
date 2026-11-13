@@ -152,6 +152,45 @@ export class SunPositionCalculator {
   }
 
   /**
+   * 某地当天的日出日落（当天 = 该时刻在 dateTime 所在时区的日期）。
+   * 极昼 / 极夜时日出日落为 null，polar 给出是哪一种。
+   */
+  static sunTimesFor(
+    dateTime: DateTime,
+    latitude: number,
+    longitude: number
+  ): {
+    sunrise: DateTime | null;
+    sunset: DateTime | null;
+    polar: 'day' | 'night' | null;
+  } {
+    // 取当地正午作为参考时刻，SunCalc 会返回离它最近的那次日出日落
+    const noon = dateTime.set({ hour: 12, minute: 0, second: 0, millisecond: 0 });
+    const times = SunCalc.getTimes(noon.toJSDate(), latitude, longitude);
+    const toLocal = (date: Date) =>
+      Number.isNaN(date.getTime())
+        ? null
+        : DateTime.fromJSDate(date).setZone(dateTime.zone);
+
+    const sunrise = toLocal(times.sunrise);
+    const sunset = toLocal(times.sunset);
+    if (sunrise && sunset) {
+      return { sunrise, sunset, polar: null };
+    }
+
+    const noonAltitude = this.altitudeAt(
+      latitude,
+      longitude,
+      this.calculateSunPosition(noon)
+    );
+    return {
+      sunrise: null,
+      sunset: null,
+      polar: noonAltitude > 0 ? 'day' : 'night',
+    };
+  }
+
+  /**
    * 给定直射点，计算某地的太阳几何高度角（度，未做大气折射修正）
    */
   static altitudeAt(

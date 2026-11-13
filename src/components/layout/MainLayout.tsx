@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { SettingsPanel } from './SettingsPanel';
 import { TimeSlider } from '@components/time/TimeSlider';
 import { useBreakpoint } from '@hooks/useWindowSize';
 
@@ -76,28 +77,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         </main>
       </div>
 
-      {/* 设置对话框 */}
+      {/* 设置面板 */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                设置
-              </h3>
-              <button
-                onClick={() => setShowSettings(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 
-                         dark:hover:text-gray-200 transition-colors"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-              设置面板开发中...
-            </div>
-          </div>
-        </div>
+        <SettingsPanel onClose={() => setShowSettings(false)} />
       )}
 
       {/* 帮助信息对话框 */}

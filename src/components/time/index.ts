@@ -2,4 +2,5 @@
 export { WorldClock } from './WorldClock';
 export { CityTimeCard } from './CityTimeCard';
 export { TimeSlider } from './TimeSlider';
-export { TimezoneSelector } from './TimezoneSelector';
+export { AddCityPanel } from './AddCityPanel';
+export { AnalogClock } from './AnalogClock';

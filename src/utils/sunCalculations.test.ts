@@ -161,3 +161,33 @@ describe('SunPositionCalculator.calculateDayNightBoundary', () => {
     }
   });
 });
+
+describe('SunPositionCalculator.sunTimesFor', () => {
+  it('洛杉矶 11 月中旬：日出约 06:30，日落约 16:50', () => {
+    const { sunrise, sunset, polar } = SunPositionCalculator.sunTimesFor(
+      DateTime.fromISO('2026-11-12T09:00:00', { zone: 'America/Los_Angeles' }),
+      34.0522,
+      -118.2437
+    );
+
+    expect(polar).toBeNull();
+    expect(sunrise?.toFormat('yyyy-MM-dd')).toBe('2026-11-12');
+    expect(sunrise?.zoneName).toBe('America/Los_Angeles');
+    expect(sunrise!.hour * 60 + sunrise!.minute).toBeGreaterThan(6 * 60 + 15);
+    expect(sunrise!.hour * 60 + sunrise!.minute).toBeLessThan(6 * 60 + 45);
+    expect(sunset!.hour * 60 + sunset!.minute).toBeGreaterThan(16 * 60 + 40);
+    expect(sunset!.hour * 60 + sunset!.minute).toBeLessThan(17 * 60);
+  });
+
+  it('特罗姆瑟（69.6°N）冬至极夜、夏至极昼', () => {
+    const tromso = (iso: string) =>
+      SunPositionCalculator.sunTimesFor(
+        DateTime.fromISO(iso, { zone: 'Europe/Oslo' }),
+        69.6492,
+        18.9553
+      ).polar;
+
+    expect(tromso('2026-12-21T12:00:00')).toBe('night');
+    expect(tromso('2026-06-21T12:00:00')).toBe('day');
+  });
+});

@@ -21,10 +21,12 @@ export class TimeFormatter {
   }
 
   /**
-   * 时区缩写，如 PST / PDT。固定用 en-US，否则中文环境下会得到 GMT-8。
+   * 时区缩写，如 PST / PDT / GMT。固定用 en-US，否则中文环境下会得到 GMT-8。
+   * 没有通用缩写的时区（Intl 只给出 GMT+9 这种）改为 UTC+09:00。
    */
   static formatZoneAbbr(dateTime: DateTime): string {
-    return dateTime.setLocale('en-US').toFormat('ZZZZ');
+    const abbr = dateTime.setLocale('en-US').toFormat('ZZZZ');
+    return /^(GMT|UTC)[+-]/.test(abbr) ? `UTC${dateTime.toFormat('ZZ')}` : abbr;
   }
 
   /**
@@ -91,6 +93,18 @@ export class TimeFormatter {
  * 时间计算工具类
  */
 export class TimeCalculator {
+  /**
+   * 设备（浏览器）当前的 IANA 时区。笔记本、手机到外地后系统通常会自动改时区。
+   */
+  static getDeviceTimeZone(): string {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  }
+
+  /** 是否为 Luxon 能识别的 IANA 时区 */
+  static isValidTimeZone(timezone: string): boolean {
+    return DateTime.now().setZone(timezone).isValid;
+  }
+
   /**
    * 将城市数据转换为城市时间数据
    */

@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSunPosition } from '@hooks/useSunPosition';
 import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
-import { BASE_ZONE } from '@data/constants';
 import type { CityTimeData } from '@/types/time';
 import { drawBaseMap } from './map2d/drawBaseMap';
 import { drawNightShade } from './map2d/drawNightShade';
@@ -42,6 +41,7 @@ export const WorldMap2D: React.FC<WorldMap2DProps> = ({
   const [hoveringCity, setHoveringCity] = useState(false);
 
   const baseTime = useTimeStore(state => state.baseTime);
+  const baseCityId = useTimeStore(state => state.baseZone.cityId);
   const theme = useSettingsStore(state => state.theme);
   const { sunPosition, dayNightBoundary } = useSunPosition();
 
@@ -130,7 +130,7 @@ export const WorldMap2D: React.FC<WorldMap2DProps> = ({
       boundary: dayNightBoundary,
       cities,
       selectedCityId: selectedCity,
-      baseCityId: BASE_ZONE.cityId,
+      baseCityId,
       utcTime: baseTime.toUTC(),
       palette,
     });
@@ -144,6 +144,7 @@ export const WorldMap2D: React.FC<WorldMap2DProps> = ({
     cities,
     selectedCity,
     baseTime,
+    baseCityId,
   ]);
 
   // 离指针最近、且在命中半径内的城市

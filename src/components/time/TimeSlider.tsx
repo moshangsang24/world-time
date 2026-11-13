@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Clock, Calendar } from 'lucide-react';
 import { useTimeStore } from '@store/timeStore';
-import { BASE_ZONE, TIME_CONSTANTS } from '@data/constants';
+import { TIME_CONSTANTS } from '@data/constants';
 import { TimeFormatter } from '@utils/timeCalculations';
 import { PerformanceUtils } from '@utils/coordinateUtils';
 import { useScrollControl } from '@hooks/useScrollControl';
@@ -14,6 +14,7 @@ export const TimeSlider: React.FC = () => {
 
   const { 
     baseTime, 
+    baseZone,
     isRealTime, 
     timeOffset, 
     setTimeOffset, 
@@ -134,7 +135,7 @@ export const TimeSlider: React.FC = () => {
             <div>
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1">
                 <Calendar className="w-4 h-4 mr-1" />
-                {BASE_ZONE.label}（{TimeFormatter.formatZoneAbbr(baseTime)}）
+                {baseZone.label}（{TimeFormatter.formatZoneAbbr(baseTime)}）
               </div>
               <div className="text-2xl font-mono font-bold text-gray-900 dark:text-white">
                 {baseTime.toFormat('yyyy-MM-dd HH:mm:ss')}

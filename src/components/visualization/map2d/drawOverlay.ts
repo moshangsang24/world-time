@@ -9,7 +9,7 @@ export interface OverlayOptions {
   boundary: DayNightBoundary;
   cities: CityTimeData[];
   selectedCityId: string | null;
-  baseCityId: string;
+  baseCityId: string | null; // 没有基准城市时（跟随设备且无同时区城市）为 null
   utcTime: DateTime;
   palette: MapPalette;
 }

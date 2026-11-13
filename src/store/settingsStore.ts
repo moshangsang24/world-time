@@ -13,6 +13,7 @@ interface SettingsActions {
   // 时间显示设置
   setTimeFormat: (format: '12h' | '24h') => void;
   setShowSeconds: (show: boolean) => void;
+  setCardStyle: (style: 'digital' | 'analog') => void;
   
   // 可视化设置
   setPreferredView: (view: '3d' | '2d') => void;
@@ -37,6 +38,7 @@ const defaultSettings: AppSettings = {
   theme: APP_CONFIG.DEFAULT_THEME,
   timeFormat: APP_CONFIG.DEFAULT_TIME_FORMAT,
   showSeconds: true,
+  cardStyle: 'digital',
   preferredView: '3d',
   animationEnabled: true,
   renderQuality: 'medium',
@@ -85,6 +87,10 @@ export const useSettingsStore = create<SettingsStore>()(
 
       setShowSeconds: (show: boolean) => {
         set({ showSeconds: show });
+      },
+
+      setCardStyle: (style: 'digital' | 'analog') => {
+        set({ cardStyle: style });
       },
 
       // 可视化设置
