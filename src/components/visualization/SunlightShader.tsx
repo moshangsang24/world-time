@@ -2,7 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Mesh, ShaderMaterial, Color, Vector3 } from 'three';
 import { EARTH_CONSTANTS, COLORS } from '@data/constants';
-import type { SunPosition } from '@types/geography';
+import type { SunPosition } from '@/types/geography';
 
 interface SunlightShaderProps {
   sunPosition: SunPosition;

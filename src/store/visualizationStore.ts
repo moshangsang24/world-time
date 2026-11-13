@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Vector3 } from 'three';
-import type { VisualizationState, EarthVisualizationSettings } from '@types/visualization';
+import type { VisualizationState } from '@/types/visualization';
+import type { EarthVisualizationSettings } from '@/types/geography';
 import { RENDERING_CONSTANTS, PERFORMANCE_CONFIG } from '@data/constants';
 
 interface VisualizationActions {

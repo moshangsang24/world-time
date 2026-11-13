@@ -13,13 +13,15 @@ export interface AppSettings {
   preferredView: '3d' | '2d';
   animationEnabled: boolean;
   
+  // 侧栏城市卡片样式
+  cardStyle: 'digital' | 'analog';
+
   // 性能设置
   renderQuality: 'low' | 'medium' | 'high';
   enableShadows: boolean;
 }
 
 export interface UserPreferences extends AppSettings {
-  selectedCities: string[];
   customCities: string[];
   lastUsedTimeOffset: number;
 }

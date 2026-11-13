@@ -1,12 +1,20 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Clock, Calendar } from 'lucide-react';
 import { useTimeStore } from '@store/timeStore';
 import { TIME_CONSTANTS } from '@data/constants';
+import { TimeFormatter } from '@utils/timeCalculations';
 import { PerformanceUtils } from '@utils/coordinateUtils';
+import { useScrollControl } from '@hooks/useScrollControl';
 
 export const TimeSlider: React.FC = () => {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // 鼠标在时间控制区上滚动同样调整时间；键盘由地图那边统一监听
+  useScrollControl({ targetRef: rootRef, keyboard: false });
+
   const { 
-    beijingTime, 
+    baseTime, 
+    baseZone,
     isRealTime, 
     timeOffset, 
     setTimeOffset, 
@@ -48,16 +56,7 @@ export const TimeSlider: React.FC = () => {
     setTimeOffset(localOffset);
   };
 
-  const formatOffsetDisplay = (offset: number): string => {
-    const hours = Math.floor(Math.abs(offset) / 60);
-    const minutes = Math.abs(offset) % 60;
-    const sign = offset >= 0 ? '+' : '-';
-    
-    if (minutes === 0) {
-      return `${sign}${hours}小时`;
-    }
-    return `${sign}${hours}小时${minutes}分钟`;
-  };
+  const formatOffsetDisplay = TimeFormatter.formatOffsetMinutes;
 
   const getOffsetColor = (offset: number): string => {
     if (offset === 0) return 'text-green-600 dark:text-green-400';
@@ -79,7 +78,10 @@ export const TimeSlider: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
+    <div
+      ref={rootRef}
+      className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4"
+    >
       <div className="max-w-6xl mx-auto">
         {/* 标题和控制按钮 */}
         <div className="flex items-center justify-between mb-4">
@@ -95,7 +97,7 @@ export const TimeSlider: React.FC = () => {
                 isRealTime ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
               }`} />
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {isRealTime ? '实时模式' : '历史模式'}
+                {isRealTime ? '实时模式' : '已暂停'}
               </span>
             </div>
           </div>
@@ -109,7 +111,7 @@ export const TimeSlider: React.FC = () => {
                   ? 'bg-green-100 text-green-600 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400' 
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400'
               }`}
-              title={isRealTime ? '暂停实时更新' : '开始实时更新'}
+              title={isRealTime ? '暂停实时更新' : '恢复实时更新'}
             >
               {isRealTime ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </button>
@@ -133,13 +135,13 @@ export const TimeSlider: React.FC = () => {
             <div>
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1">
                 <Calendar className="w-4 h-4 mr-1" />
-                北京时间
+                {baseZone.label}（{TimeFormatter.formatZoneAbbr(baseTime)}）
               </div>
               <div className="text-2xl font-mono font-bold text-gray-900 dark:text-white">
-                {beijingTime.toFormat('yyyy-MM-dd HH:mm:ss')}
+                {baseTime.toFormat('yyyy-MM-dd HH:mm:ss')}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                {beijingTime.toFormat('cccc', { locale: 'zh' })}
+                {baseTime.toFormat('cccc', { locale: 'zh' })}
               </div>
             </div>
             
@@ -199,7 +201,12 @@ export const TimeSlider: React.FC = () => {
               key={jump.label}
               onClick={() => {
                 setLocalOffset(jump.offset);
-                setTimeOffset(jump.offset);
+                // "现在"回到实时走动，其余按钮相对冻结时刻偏移
+                if (jump.offset === 0) {
+                  resetToRealTime();
+                } else {
+                  setTimeOffset(jump.offset);
+                }
               }}
               className={`px-3 py-1 text-sm rounded transition-colors duration-200 ${
                 localOffset === jump.offset
@@ -214,7 +221,7 @@ export const TimeSlider: React.FC = () => {
 
         {/* 使用说明 */}
         <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 text-center">
-          拖拽滑块或使用快捷按钮来改变时间 • 滚动鼠标滚轮也可以控制时间变化
+          拖拽滑块或使用快捷按钮来改变时间 • 在地图或这里滚动鼠标滚轮，每格 1 分钟
         </div>
       </div>
     </div>

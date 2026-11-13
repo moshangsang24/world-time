@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
-import { CityData, SunPosition } from './time';
-import { EarthVisualizationSettings } from './geography';
+import { CityData } from './time';
+import { EarthVisualizationSettings, SunPosition } from './geography';
 
 export interface VisualizationState {
   // 3D场景设置

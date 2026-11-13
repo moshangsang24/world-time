@@ -1,11 +1,34 @@
 import { DateTime } from 'luxon';
-import { TIME_CONSTANTS, ASTRONOMICAL_CONSTANTS } from '@data/constants';
-import type { CityData, CityTimeData } from '@types/time';
+import { TIME_CONSTANTS } from '@data/constants';
+import type { CityData, CityTimeData } from '@/types/time';
+import { SunPositionCalculator } from './sunCalculations';
 
 /**
  * 时间格式化工具函数
  */
 export class TimeFormatter {
+  /**
+   * 格式化分钟数偏移，如 +30分钟、-1小时、+2小时15分钟
+   */
+  static formatOffsetMinutes(offset: number): string {
+    const sign = offset >= 0 ? '+' : '-';
+    const hours = Math.floor(Math.abs(offset) / 60);
+    const minutes = Math.abs(offset) % 60;
+
+    if (hours === 0) return `${sign}${minutes}分钟`;
+    if (minutes === 0) return `${sign}${hours}小时`;
+    return `${sign}${hours}小时${minutes}分钟`;
+  }
+
+  /**
+   * 时区缩写，如 PST / PDT / GMT。固定用 en-US，否则中文环境下会得到 GMT-8。
+   * 没有通用缩写的时区（Intl 只给出 GMT+9 这种）改为 UTC+09:00。
+   */
+  static formatZoneAbbr(dateTime: DateTime): string {
+    const abbr = dateTime.setLocale('en-US').toFormat('ZZZZ');
+    return /^(GMT|UTC)[+-]/.test(abbr) ? `UTC${dateTime.toFormat('ZZ')}` : abbr;
+  }
+
   /**
    * 格式化时间字符串
    */
@@ -71,6 +94,18 @@ export class TimeFormatter {
  */
 export class TimeCalculator {
   /**
+   * 设备（浏览器）当前的 IANA 时区。笔记本、手机到外地后系统通常会自动改时区。
+   */
+  static getDeviceTimeZone(): string {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  }
+
+  /** 是否为 Luxon 能识别的 IANA 时区 */
+  static isValidTimeZone(timezone: string): boolean {
+    return DateTime.now().setZone(timezone).isValid;
+  }
+
+  /**
    * 将城市数据转换为城市时间数据
    */
   static createCityTimeData(
@@ -91,7 +126,11 @@ export class TimeCalculator {
       localDate: TimeFormatter.formatDate(cityTime, locale),
       timeString: TimeFormatter.formatTime(cityTime, format, showSeconds),
       utcOffsetString: TimeFormatter.formatUtcOffset(cityTime),
-      isDaytime: this.isDaytime(cityData.latitude, cityData.longitude, cityTime),
+      isDaytime: SunPositionCalculator.isDaylight(
+        cityData.latitude,
+        cityData.longitude,
+        SunPositionCalculator.calculateSunPosition(cityTime)
+      ),
     };
   }
 
@@ -121,23 +160,6 @@ export class TimeCalculator {
   }
 
   /**
-   * 判断指定位置在指定时间是否为白昼
-   * 这是一个简化版本，后续会被太阳位置计算替代
-   */
-  static isDaytime(
-    latitude: number, 
-    longitude: number, 
-    dateTime: DateTime
-  ): boolean {
-    // 简化计算：基于当地时间的小时判断
-    const localTime = dateTime.setZone(`UTC${Math.round(longitude / 15)}`);
-    const hour = localTime.hour;
-    
-    // 简单的昼夜判断：6点到18点为白天
-    return hour >= 6 && hour < 18;
-  }
-
-  /**
    * 计算两个时间之间的差值
    */
   static getTimeDifference(
@@ -149,9 +171,38 @@ export class TimeCalculator {
   }
 
   /**
-   * 获取时区列表（按UTC偏移排序）
+   * 某个时刻相对基准时区的时差。
+   * hours：比基准快（正）或慢（负）多少小时，按当时的实际偏移算，含夏令时；
+   * dayDelta：当地日期比基准日期早 / 晚几天（-1 昨天，0 同一天，1 明天）。
    */
-  static getSortedTimezones(cities: CityData[]): Array<{
+  static differenceFromZone(
+    localTime: DateTime,
+    baseTimezone: string
+  ): { hours: number; dayDelta: number } {
+    const baseTime = localTime.setZone(baseTimezone);
+    const dayDelta = Math.round(
+      localTime
+        .startOf('day')
+        .setZone('utc', { keepLocalTime: true })
+        .diff(
+          baseTime.startOf('day').setZone('utc', { keepLocalTime: true }),
+          'days'
+        ).days
+    );
+
+    return {
+      hours: (localTime.offset - baseTime.offset) / 60,
+      dayDelta,
+    };
+  }
+
+  /**
+   * 获取时区列表（按当前实际 UTC 偏移排序，含夏令时）
+   */
+  static getSortedTimezones(
+    cities: CityData[],
+    at: DateTime = DateTime.now()
+  ): Array<{
     timezone: string;
     offset: number;
     cities: CityData[];
@@ -161,7 +212,7 @@ export class TimeCalculator {
     cities.forEach(city => {
       if (!timezoneMap.has(city.timezone)) {
         timezoneMap.set(city.timezone, {
-          offset: city.utcOffset,
+          offset: at.setZone(city.timezone).offset / 60,
           cities: []
         });
       }

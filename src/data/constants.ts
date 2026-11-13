@@ -1,3 +1,7 @@
+// 默认基准城市：首次打开、或保存的基准城市已不存在时使用。
+// 运行时的基准由 timeStore.baseZone 决定，可在设置里切换。
+export const DEFAULT_BASE_CITY_ID = 'los-angeles';
+
 // 时间相关常量
 export const TIME_CONSTANTS = {
   MINUTES_PER_HOUR: 60,

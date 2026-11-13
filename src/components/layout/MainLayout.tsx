@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { SettingsPanel } from './SettingsPanel';
 import { TimeSlider } from '@components/time/TimeSlider';
 import { useBreakpoint } from '@hooks/useWindowSize';
 
@@ -40,14 +41,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   }, [isMd]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* 顶部导航栏 */}
       <Header 
         onSettingsClick={handleSettingsClick}
         onInfoClick={handleInfoClick}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* 侧边栏 */}
         <Sidebar 
           isOpen={sidebarOpen}
@@ -57,13 +58,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         {/* 主要内容区域 */}
         <main 
           className={`
-            flex-1 flex flex-col overflow-hidden
+            flex-1 min-w-0 flex flex-col overflow-hidden
             ${isMd && sidebarOpen ? 'ml-0' : ''}
             transition-all duration-300 ease-in-out
           `}
         >
           {/* 3D可视化区域 */}
-          <div className="flex-1 relative">
+          <div className="flex-1 min-h-0 relative">
             {children}
           </div>
 
@@ -76,28 +77,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         </main>
       </div>
 
-      {/* 设置对话框 */}
+      {/* 设置面板 */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                设置
-              </h3>
-              <button
-                onClick={() => setShowSettings(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 
-                         dark:hover:text-gray-200 transition-colors"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-              设置面板开发中...
-            </div>
-          </div>
-        </div>
+        <SettingsPanel onClose={() => setShowSettings(false)} />
       )}
 
       {/* 帮助信息对话框 */}
@@ -131,11 +113,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">键盘快捷键</h4>
                 <ul className="space-y-1 list-disc list-inside ml-4">
-                  <li>方向键：控制时间前进/后退</li>
-                  <li>空格键：切换实时/历史模式</li>
-                  <li>Home键：回到当前时间</li>
-                  <li>Page Up/Down：快速调整时间</li>
-                  <li>Ctrl + 方向键：精细时间控制</li>
+                  <li>← / →：时间后退 / 前进 1 分钟</li>
+                  <li>空格键：暂停 / 恢复实时</li>
+                  <li>Home键：回到当前时间并恢复实时</li>
                 </ul>
               </div>
               
@@ -143,7 +123,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">时间控制</h4>
                 <ul className="space-y-1 list-disc list-inside ml-4">
                   <li>实时模式：显示当前真实时间</li>
-                  <li>历史模式：可查看前后24小时的时间</li>
+                  <li>暂停后：以暂停那一刻为起点，可查看前后24小时</li>
                   <li>滚动或拖拽滑块改变时间</li>
                   <li>点击快捷按钮快速跳转</li>
                 </ul>

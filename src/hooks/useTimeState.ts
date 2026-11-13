@@ -1,20 +1,17 @@
 import { useMemo } from 'react';
 import { useTimeStore } from '@store/timeStore';
 import { useSettingsStore } from '@store/settingsStore';
-import { TimeCalculator, TimeFormatter } from '@utils/timeCalculations';
-import { useSunPosition } from './useSunPosition';
-import type { CityTimeData } from '@types/time';
+import { TimeFormatter } from '@utils/timeCalculations';
+import type { CityTimeData } from '@/types/time';
 
 export const useTimeState = () => {
   const timeState = useTimeStore();
   const { language, timeFormat, showSeconds } = useSettingsStore();
-  const { isDaylight } = useSunPosition();
 
-  // 增强的城市时间数据（包含太阳位置计算）
+  // 按用户设置重新格式化的城市时间数据（昼夜已由 timeStore 算好）
   const enhancedCities = useMemo<CityTimeData[]>(() => {
     return timeState.cities.map(city => ({
       ...city,
-      isDaytime: isDaylight(city.latitude, city.longitude),
       timeString: TimeFormatter.formatTime(
         city.currentTime, 
         timeFormat, 
@@ -22,29 +19,30 @@ export const useTimeState = () => {
       ),
       localDate: TimeFormatter.formatDate(city.currentTime, language),
     }));
-  }, [timeState.cities, isDaylight, timeFormat, showSeconds, language]);
+  }, [timeState.cities, timeFormat, showSeconds, language]);
 
-  // 当前北京时间的格式化显示
-  const formattedBeijingTime = useMemo(() => {
+  // 基准时间的格式化显示
+  const formattedBaseTime = useMemo(() => {
     return {
-      time: TimeFormatter.formatTime(timeState.beijingTime, timeFormat, showSeconds),
-      date: TimeFormatter.formatDate(timeState.beijingTime, language),
-      utcOffset: TimeFormatter.formatUtcOffset(timeState.beijingTime),
+      time: TimeFormatter.formatTime(timeState.baseTime, timeFormat, showSeconds),
+      date: TimeFormatter.formatDate(timeState.baseTime, language),
+      utcOffset: TimeFormatter.formatUtcOffset(timeState.baseTime),
+      label: timeState.baseZone.label,
+      zoneAbbr: TimeFormatter.formatZoneAbbr(timeState.baseTime),
     };
-  }, [timeState.beijingTime, timeFormat, showSeconds, language]);
+  }, [
+    timeState.baseTime,
+    timeState.baseZone.label,
+    timeFormat,
+    showSeconds,
+    language,
+  ]);
 
   // 时间偏移的格式化显示
   const formattedTimeOffset = useMemo(() => {
     if (timeState.timeOffset === 0) return null;
     
-    const hours = Math.floor(Math.abs(timeState.timeOffset) / 60);
-    const minutes = Math.abs(timeState.timeOffset) % 60;
-    const sign = timeState.timeOffset >= 0 ? '+' : '-';
-    
-    if (minutes === 0) {
-      return `${sign}${hours}小时`;
-    }
-    return `${sign}${hours}小时${minutes}分钟`;
+    return TimeFormatter.formatOffsetMinutes(timeState.timeOffset);
   }, [timeState.timeOffset]);
 
   // 按时区分组的城市
@@ -62,7 +60,8 @@ export const useTimeState = () => {
       .map(([timezone, cities]) => ({
         timezone,
         cities,
-        utcOffset: cities[0].utcOffset,
+        // 当前实际偏移（小时），含夏令时
+        utcOffset: cities[0].currentTime.offset / 60,
       }))
       .sort((a, b) => a.utcOffset - b.utcOffset);
   }, [enhancedCities]);
@@ -94,7 +93,7 @@ export const useTimeState = () => {
     
     // 增强的数据
     cities: enhancedCities,
-    formattedBeijingTime,
+    formattedBaseTime,
     formattedTimeOffset,
     citiesByTimezone,
     citiesByDayNight,

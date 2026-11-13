@@ -129,6 +129,14 @@ export class Formatters {
  */
 export class I18nFormatters {
   /**
+   * Intl 默认按运行环境的时区格式化；必须显式传入 DateTime 自己的时区，
+   * 否则跨日时星期、日期会显示成浏览器所在地的。
+   */
+  private static zoneOf(dateTime: DateTime): string {
+    return dateTime.zoneName ?? 'UTC';
+  }
+
+  /**
    * 获取城市名称（根据语言）
    */
   static getCityName(city: { name: string; nameEn: string }, locale = 'zh'): string {
@@ -148,7 +156,10 @@ export class I18nFormatters {
     const formatOptions = { ...defaultOptions, ...options };
     const intlLocale = locale === 'zh' ? 'zh-CN' : 'en-US';
     
-    return new Intl.DateTimeFormat(intlLocale, formatOptions).format(dateTime.toJSDate());
+    return new Intl.DateTimeFormat(intlLocale, {
+      ...formatOptions,
+      timeZone: this.zoneOf(dateTime),
+    }).format(dateTime.toJSDate());
   }
 
   /**
@@ -171,7 +182,10 @@ export class I18nFormatters {
     }
 
     const intlLocale = locale === 'zh' ? 'zh-CN' : 'en-US';
-    return new Intl.DateTimeFormat(intlLocale, options).format(dateTime.toJSDate());
+    return new Intl.DateTimeFormat(intlLocale, {
+      ...options,
+      timeZone: this.zoneOf(dateTime),
+    }).format(dateTime.toJSDate());
   }
 
   /**
@@ -179,7 +193,10 @@ export class I18nFormatters {
    */
   static formatWeekday(dateTime: DateTime, locale = 'zh'): string {
     const intlLocale = locale === 'zh' ? 'zh-CN' : 'en-US';
-    return new Intl.DateTimeFormat(intlLocale, { weekday: 'long' }).format(dateTime.toJSDate());
+    return new Intl.DateTimeFormat(intlLocale, {
+      weekday: 'long',
+      timeZone: this.zoneOf(dateTime),
+    }).format(dateTime.toJSDate());
   }
 
   /**
@@ -187,7 +204,10 @@ export class I18nFormatters {
    */
   static formatMonth(dateTime: DateTime, locale = 'zh'): string {
     const intlLocale = locale === 'zh' ? 'zh-CN' : 'en-US';
-    return new Intl.DateTimeFormat(intlLocale, { month: 'long' }).format(dateTime.toJSDate());
+    return new Intl.DateTimeFormat(intlLocale, {
+      month: 'long',
+      timeZone: this.zoneOf(dateTime),
+    }).format(dateTime.toJSDate());
   }
 }
 
